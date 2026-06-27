@@ -1,4 +1,3 @@
-//await uploadHex(hex);
 import { useRef, useState } from "react";
 import { compileArduinoCode } from "../lib/arduinoCompile";
 import { uploadHex } from "../lib/stk500Uploader";

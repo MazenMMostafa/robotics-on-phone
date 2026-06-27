@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BoardType } from "../lib/blocks";
 import type { WorkspaceSvg } from "blockly";
 import { javascriptGenerator } from "blockly/javascript";
@@ -1251,12 +1251,19 @@ function uniqueLines(text: string) {
 export function BlocklyWorkspace({ board, initialXml, onChange }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<WorkspaceSvg | null>(null);
+  const blocklyRef = useRef<typeof import("blockly") | null>(null);
   const onChangeRef = useRef(onChange);
   const initialXmlRef = useRef(initialXml);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  useEffect(() => {
+    initialXmlRef.current = initialXml;
+  }, [initialXml]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !containerRef.current) return;
@@ -1266,100 +1273,101 @@ export function BlocklyWorkspace({ board, initialXml, onChange }: Props) {
     let loaded = false;
 
     async function setupBlockly() {
-      const Blockly = await import("blockly");
+      setLoading(true);
+      setError(null);
 
-      if (disposed || !containerRef.current) return;
+      try {
+        const Blockly = await import("blockly");
 
-      registerCustomBlocks(Blockly);
-      registerArduinoGenerators();
+        if (disposed || !containerRef.current) return;
 
-      ws = Blockly.inject(containerRef.current, {
-        toolbox: buildToolbox(board),
-        grid: { spacing: 20, length: 3, colour: "#ccc", snap: true },
-        zoom: {
-          controls: true,
-          wheel: true,
-          startScale: 0.9,
-          maxScale: 2,
-          minScale: 0.4,
-        },
-        trashcan: true,
-        renderer: "zelos",
-        move: { scrollbars: true, drag: true, wheel: false },
-      });
+        registerCustomBlocks(Blockly);
+        registerArduinoGenerators();
 
-      workspaceRef.current = ws;
+        ws = Blockly.inject(containerRef.current, {
+          toolbox: buildToolbox(board),
+          grid: { spacing: 20, length: 3, colour: "#ccc", snap: true },
+          zoom: {
+            controls: true,
+            wheel: true,
+            startScale: 0.9,
+            maxScale: 2,
+            minScale: 0.4,
+          },
+          trashcan: true,
+          renderer: "zelos",
+          move: { scrollbars: true, drag: true, wheel: false },
+        });
 
-      const setupToolboxToggle = () => {
-        const toolbox = document.querySelector(".blocklyToolboxDiv");
+        workspaceRef.current = ws;
+        blocklyRef.current = Blockly;
 
-        if (!toolbox) return undefined;
+        const setupToolboxToggle = () => {
+          const toolbox = document.querySelector(".blocklyToolboxDiv");
 
-        toolbox.classList.add("rb-toolbox-collapsed");
+          if (!toolbox) return undefined;
 
-        const openToolbox = () => {
-          toolbox.classList.add("rb-toolbox-open");
+          toolbox.classList.add("rb-toolbox-collapsed");
 
-          setTimeout(() => {
-            if (ws) Blockly.svgResize(ws);
-          }, 50);
+          const openToolbox = () => {
+            toolbox.classList.add("rb-toolbox-open");
+
+            setTimeout(() => {
+              if (ws) Blockly.svgResize(ws);
+            }, 50);
+          };
+
+          const closeToolbox = () => {
+            toolbox.classList.remove("rb-toolbox-open");
+
+            setTimeout(() => {
+              if (ws) Blockly.svgResize(ws);
+            }, 50);
+          };
+
+          const stopCloseFromToolbox = (event: Event) => {
+            event.stopPropagation();
+          };
+
+          toolbox.addEventListener("pointerdown", stopCloseFromToolbox);
+          toolbox.addEventListener("click", openToolbox);
+
+          const workspaceEl = containerRef.current;
+          workspaceEl?.addEventListener("pointerdown", closeToolbox);
+
+          return () => {
+            toolbox.removeEventListener("pointerdown", stopCloseFromToolbox);
+            toolbox.removeEventListener("click", openToolbox);
+            workspaceEl?.removeEventListener("pointerdown", closeToolbox);
+          };
         };
 
-        const closeToolbox = () => {
-          toolbox.classList.remove("rb-toolbox-open");
+        const cleanupToolbox = setupToolboxToggle();
 
-          setTimeout(() => {
-            if (ws) Blockly.svgResize(ws);
-          }, 50);
-        };
+        window.getCode = () => {
+          if (!ws) return "";
 
-        const stopCloseFromToolbox = (event: Event) => {
-          event.stopPropagation();
-        };
+          window._setupCode = "";
+          window._loopCode = "";
+          window._functionCode = "";
+          window._helperCode = "";
+          window._includeCode = "";
+          window._globalCode = "";
 
-        toolbox.addEventListener("pointerdown", stopCloseFromToolbox);
-        toolbox.addEventListener("click", openToolbox);
+          const looseCode = javascriptGenerator.workspaceToCode(ws);
+          const vars = Blockly.Variables.allUsedVarModels(ws);
+          const varDefs = vars
+            .map((v) => `int ${safeArduinoName(v.getName())} = 0;`)
+            .join("\n");
 
-        const workspaceEl = containerRef.current;
-        workspaceEl?.addEventListener("pointerdown", closeToolbox);
+          const includeCode = uniqueLines(window._includeCode);
+          const globalCode = uniqueLines(window._globalCode);
+          const setup = window._setupCode || "";
+          const loop = window._loopCode || looseCode || "";
+          const functionCode = window._functionCode || "";
+          const helperCode = window._helperCode || "";
 
-        return () => {
-          toolbox.removeEventListener("pointerdown", stopCloseFromToolbox);
-          toolbox.removeEventListener("click", openToolbox);
-          workspaceEl?.removeEventListener("pointerdown", closeToolbox);
-        };
-      };
-
-      const cleanupToolbox = setupToolboxToggle();
-
-      window.getCode = () => {
-        if (!ws) return "";
-
-        const dom = Blockly.Xml.workspaceToDom(ws);
-        const xml = Blockly.Xml.domToText(dom);
-        console.log("XML:", xml);
-
-        window._setupCode = "";
-        window._loopCode = "";
-        window._functionCode = "";
-        window._helperCode = "";
-        window._includeCode = "";
-        window._globalCode = "";
-
-        const looseCode = javascriptGenerator.workspaceToCode(ws);
-        const vars = Blockly.Variables.allUsedVarModels(ws);
-        const varDefs = vars
-          .map((v) => `int ${safeArduinoName(v.getName())} = 0;`)
-          .join("\n");
-
-        const includeCode = uniqueLines(window._includeCode);
-        const globalCode = uniqueLines(window._globalCode);
-        const setup = window._setupCode || "";
-        const loop = window._loopCode || looseCode || "";
-        const functionCode = window._functionCode || "";
-        const helperCode = window._helperCode || "";
-
-        const fullCode = `
+          return `
 ${includeCode}
 
 ${globalCode}
@@ -1375,46 +1383,50 @@ void loop() {
 ${loop}
 }
 `;
+        };
 
-        console.log("Arduino Code:", fullCode);
-        return fullCode;
-      };
+        const xmlToLoad = initialXmlRef.current;
 
-      const xmlToLoad = initialXmlRef.current;
+        if (xmlToLoad) {
+          try {
+            const dom = Blockly.utils.xml.textToDom(xmlToLoad);
+            Blockly.Xml.domToWorkspace(dom, ws);
+          } catch {
+            // ignore corrupt saved xml
+          }
+        }
 
-      if (xmlToLoad) {
-        try {
-          const dom = Blockly.utils.xml.textToDom(xmlToLoad);
-          Blockly.Xml.domToWorkspace(dom, ws);
-        } catch {
-          // ignore corrupt saved xml
+        loaded = true;
+        setLoading(false);
+
+        ws.addChangeListener((event: { isUiEvent?: boolean }) => {
+          if (!loaded) return;
+          if (event?.isUiEvent) return;
+          if (!onChangeRef.current || !ws) return;
+
+          const dom = Blockly.Xml.workspaceToDom(ws);
+          onChangeRef.current(Blockly.Xml.domToText(dom));
+        });
+
+        const resize = () => {
+          if (ws) Blockly.svgResize(ws);
+        };
+
+        window.addEventListener("resize", resize);
+        setTimeout(resize, 0);
+
+        ws.addChangeListener(() => resize());
+
+        return () => {
+          window.removeEventListener("resize", resize);
+          cleanupToolbox?.();
+        };
+      } catch (err) {
+        if (!disposed) {
+          setError(err instanceof Error ? err.message : "Failed to load Blockly");
+          setLoading(false);
         }
       }
-
-      loaded = true;
-
-      ws.addChangeListener((event: { isUiEvent?: boolean }) => {
-        if (!loaded) return;
-        if (event?.isUiEvent) return;
-        if (!onChangeRef.current || !ws) return;
-
-        const dom = Blockly.Xml.workspaceToDom(ws);
-        onChangeRef.current(Blockly.Xml.domToText(dom));
-      });
-
-      const resize = () => {
-        if (ws) Blockly.svgResize(ws);
-      };
-
-      window.addEventListener("resize", resize);
-      setTimeout(resize, 0);
-
-      ws.addChangeListener(() => resize());
-
-      return () => {
-        window.removeEventListener("resize", resize);
-        cleanupToolbox?.();
-      };
     }
 
     let cleanup: (() => void) | undefined;
@@ -1429,10 +1441,54 @@ ${loop}
 
       if (ws) {
         ws.dispose();
+        workspaceRef.current = null;
       }
     };
   }, [board]);
 
-  return <div ref={containerRef} className="absolute inset-0" />;
+  useEffect(() => {
+    const ws = workspaceRef.current;
+    const Blockly = blocklyRef.current;
+    if (!ws || !Blockly || !initialXml) return;
+
+    try {
+      const dom = Blockly.utils.xml.textToDom(initialXml);
+      Blockly.Xml.clearWorkspaceAndLoadFromXml(dom, ws);
+    } catch {
+      // ignore corrupt xml
+    }
+  }, [initialXml]);
+
+  if (error) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-background p-8">
+        <div className="text-center max-w-sm">
+          <div className="text-4xl mb-4">⚠️</div>
+          <p className="text-destructive font-bold mb-2">Failed to load Blockly</p>
+          <p className="text-muted-foreground text-sm">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold"
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div ref={containerRef} className="absolute inset-0" />
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Loading workspace...</p>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 

@@ -1,0 +1,3131 @@
+================================================================================
+FILE: App.tsx
+================================================================================
+
+import { useState } from "react";
+import HomePage from "./spa/HomePage";
+import NewProjectPage from "./spa/NewProjectPage";
+import ProjectsPage from "./spa/ProjectsPage";
+import EditorPage from "./spa/EditorPage";
+import ConnectPage from "./spa/ConnectPage";
+import HelpPage from "./spa/HelpPage";
+
+export type Page =
+  | { name: "home" }
+  | { name: "new" }
+  | { name: "projects" }
+  | { name: "editor"; id: string }
+  | { name: "connect"; backTo?: Page }
+  | { name: "help" };
+
+function App() {
+  const [page, setPage] = useState<Page>({ name: "home" });
+
+  if (page.name === "new") return <NewProjectPage setPage={setPage} />;
+  if (page.name === "projects") return <ProjectsPage setPage={setPage} />;
+  if (page.name === "editor")
+    return <EditorPage id={page.id} setPage={setPage} />;
+  if (page.name === "connect") {
+  return <ConnectPage setPage={setPage} backTo={page.backTo} />;
+}
+  if (page.name === "help") return <HelpPage setPage={setPage} />;
+
+  return <HomePage setPage={setPage} />;
+}
+
+export default App;
+
+
+================================================================================
+FILE: components\Block.tsx
+================================================================================
+
+import type { BlockDef } from "../lib/blocks";
+
+export function BlockChip({
+  block,
+  colorVar,
+  onPointerDown,
+  draggable,
+}: {
+  block: BlockDef;
+  colorVar: string;
+  onPointerDown?: (e: React.PointerEvent) => void;
+  draggable?: boolean;
+}) {
+  const shape = block.shape ?? "stack";
+  const radius =
+    shape === "reporter"
+      ? "rounded-full"
+      : shape === "hat"
+        ? "rounded-t-3xl rounded-b-lg"
+        : "rounded-lg";
+
+  return (
+    <div
+      onPointerDown={onPointerDown}
+      className={`select-none ${radius} px-3 py-2 text-white text-sm font-bold shadow-[var(--shadow-block)] ${draggable ? "cursor-grab active:cursor-grabbing active:scale-95" : ""} transition-transform`}
+      style={{ background: `var(--${colorVar})` }}
+    >
+      {block.label}
+    </div>
+  );
+}
+
+
+================================================================================
+FILE: components\BlocklyWorkspace.tsx
+================================================================================
+
+import { useEffect, useRef } from "react";
+import type { BoardType } from "../lib/blocks";
+import type { WorkspaceSvg } from "blockly";
+import { javascriptGenerator } from "blockly/javascript";
+
+declare global {
+  interface Window {
+    getCode: () => string;
+    _setupCode: string;
+    _loopCode: string;
+  }
+}
+
+interface Props {
+  board: BoardType;
+  initialXml?: string;
+  onChange?: (xml: string) => void;
+}
+
+function buildToolbox(board: BoardType) {
+  const categories: Array<{
+    name: string;
+    colour: string;
+    contents: Array<{ kind: string; type: string }>;
+  }> = [
+    {
+      name: "Logic",
+      colour: "#5C81A6",
+      contents: [
+        { kind: "block", type: "controls_if" },
+        { kind: "block", type: "logic_compare" },
+        { kind: "block", type: "logic_operation" },
+        { kind: "block", type: "logic_negate" },
+        { kind: "block", type: "logic_boolean" },
+      ],
+    },
+    {
+      name: "Loops",
+      colour: "#5CA65C",
+      contents: [
+        { kind: "block", type: "controls_repeat_ext" },
+        { kind: "block", type: "controls_whileUntil" },
+        { kind: "block", type: "rb_forever" },
+      ],
+    },
+    {
+      name: "Math",
+      colour: "#5C68A6",
+      contents: [
+        { kind: "block", type: "math_number" },
+        { kind: "block", type: "math_arithmetic" },
+        { kind: "block", type: "math_random_int" },
+      ],
+    },
+    {
+      name: "Text",
+      colour: "#5CA68D",
+      contents: [
+        { kind: "block", type: "text" },
+        { kind: "block", type: "text_print" },
+      ],
+    },
+    {
+      name: "Variables",
+      colour: "#A65C81",
+      contents: [],
+    },
+    {
+      name:
+        board === "nano"
+          ? "Arduino Nano"
+          : board === "uno"
+            ? "Arduino Uno"
+            : "ESP32",
+      colour: "#00B894",
+      contents: [
+        { kind: "block", type: "rb_when_start" },
+        { kind: "block", type: "rb_read_digital_pin" },
+        { kind: "block", type: "rb_read_analog_pin" },
+        { kind: "block", type: "rb_set_digital_pin" },
+        { kind: "block", type: "rb_set_pwm_pin" },
+        { kind: "block", type: "rb_play_tone" },
+        { kind: "block", type: "rb_get_timer" },
+        { kind: "block", type: "rb_reset_timer" },
+        { kind: "block", type: "rb_map_value" },
+      ],
+    },
+    {
+      name: "I/O",
+      colour: "#E67E22",
+      contents: [
+        { kind: "block", type: "rb_pin_mode" },
+        { kind: "block", type: "rb_digital_write" },
+        { kind: "block", type: "rb_digital_read" },
+        { kind: "block", type: "rb_analog_read" },
+        { kind: "block", type: "rb_analog_write" },
+      ],
+    },
+    {
+      name: "Time",
+      colour: "#9B59B6",
+      contents: [{ kind: "block", type: "rb_delay" }],
+    },
+    {
+      name: "LED",
+      colour: "#F1C40F",
+      contents: [
+        { kind: "block", type: "rb_led_on" },
+        { kind: "block", type: "rb_led_off" },
+      ],
+    },
+    {
+      name: "Actuators",
+      colour: "#7CB342",
+      contents: [{ kind: "block", type: "rb_servo_write" }],
+    },
+    {
+      name: "Servo",
+      colour: "#16A085",
+      contents: [{ kind: "block", type: "rb_servo_write" }],
+    },
+    {
+      name: "Serial",
+      colour: "#34495E",
+      contents: [
+        { kind: "block", type: "rb_serial_begin" },
+        { kind: "block", type: "rb_serial_print" },
+      ],
+    },
+  ];
+
+  if (board === "esp32") {
+    categories.push({
+      name: "Wi-Fi",
+      colour: "#3498DB",
+      contents: [{ kind: "block", type: "rb_wifi_connect" }],
+    });
+
+    categories.push({
+      name: "Bluetooth",
+      colour: "#2980B9",
+      contents: [
+        { kind: "block", type: "rb_bt_begin" },
+        { kind: "block", type: "rb_bt_send" },
+      ],
+    });
+  }
+
+  return {
+    kind: "categoryToolbox",
+    contents: categories.map((c) => ({
+      kind: "category",
+      name: c.name,
+      colour: c.colour,
+      ...(c.name === "Variables" ? { custom: "VARIABLE" } : {}),
+      contents: c.contents,
+    })),
+  };
+}
+
+let customBlocksRegistered = false;
+
+function registerCustomBlocks(Blockly: typeof import("blockly")) {
+  if (customBlocksRegistered) return;
+  customBlocksRegistered = true;
+
+  const defs = [
+    {
+      type: "rb_forever",
+      message0: "forever",
+      message1: "%1",
+      args1: [
+        {
+          type: "input_statement",
+          name: "DO",
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#5CA65C",
+    },
+    {
+      type: "rb_when_start",
+      message0: "when Arduino starts up",
+      message1: "%1",
+      args1: [{ type: "input_statement", name: "DO" }],
+      colour: "#607D8B",
+    },
+    {
+      type: "rb_set_digital_pin",
+      message0: "set digital pin %1 output as %2",
+      args0: [
+        { type: "field_number", name: "PIN", value: 13, min: 0, max: 40 },
+        {
+          type: "field_dropdown",
+          name: "VALUE",
+          options: [
+            ["HIGH", "HIGH"],
+            ["LOW", "LOW"],
+          ],
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#00B894",
+    },
+    {
+      type: "rb_read_digital_pin",
+      message0: "read status of digital pin %1",
+      args0: [
+        { type: "field_number", name: "PIN", value: 13, min: 0, max: 40 },
+      ],
+      output: "Boolean",
+      colour: "#00B894",
+    },
+    {
+      type: "rb_read_analog_pin",
+      message0: "read analog pin %1",
+      args0: [
+        {
+          type: "field_dropdown",
+          name: "PIN",
+          options: [
+            ["A0", "A0"],
+            ["A1", "A1"],
+            ["A2", "A2"],
+            ["A3", "A3"],
+            ["A4", "A4"],
+            ["A5", "A5"],
+          ],
+        },
+      ],
+      output: "Number",
+      colour: "#00B894",
+    },
+    {
+      type: "rb_set_pwm_pin",
+      message0: "set PWM pin %1 output as %2",
+      args0: [
+        {
+          type: "field_dropdown",
+          name: "PIN",
+          options: [
+            ["3", "3"],
+            ["5", "5"],
+            ["6", "6"],
+            ["9", "9"],
+            ["10", "10"],
+            ["11", "11"],
+          ],
+        },
+        { type: "field_number", name: "VALUE", value: 255, min: 0, max: 255 },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#00B894",
+    },
+    {
+      type: "rb_play_tone",
+      message0: "play tone on pin %1 of note %2",
+      args0: [
+        { type: "field_number", name: "PIN", value: 3, min: 0, max: 40 },
+        {
+          type: "field_dropdown",
+          name: "NOTE",
+          options: [
+            ["C2", "65"],
+            ["D2", "73"],
+            ["E2", "82"],
+            ["F2", "87"],
+            ["G2", "98"],
+            ["A2", "110"],
+            ["B2", "123"],
+            ["C3", "131"],
+          ],
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#00B894",
+    },
+    {
+      type: "rb_get_timer",
+      message0: "get timer value",
+      output: "Number",
+      colour: "#00B894",
+    },
+    {
+      type: "rb_reset_timer",
+      message0: "reset timer",
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#00B894",
+    },
+    {
+      type: "rb_map_value",
+      message0: "map %1 from %2 ~ %3 to %4 ~ %5",
+      args0: [
+        { type: "input_value", name: "VALUE" },
+        { type: "field_number", name: "FROM_LOW", value: 0 },
+        { type: "field_number", name: "FROM_HIGH", value: 255 },
+        { type: "field_number", name: "TO_LOW", value: 0 },
+        { type: "field_number", name: "TO_HIGH", value: 100 },
+      ],
+      output: "Number",
+      colour: "#00B894",
+    },
+    {
+      type: "rb_pin_mode",
+      message0: "pinMode pin %1 as %2",
+      args0: [
+        { type: "field_number", name: "PIN", value: 13, min: 0, max: 40 },
+        {
+          type: "field_dropdown",
+          name: "MODE",
+          options: [
+            ["OUTPUT", "OUTPUT"],
+            ["INPUT", "INPUT"],
+            ["INPUT_PULLUP", "INPUT_PULLUP"],
+          ],
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#E67E22",
+    },
+    {
+      type: "rb_digital_write",
+      message0: "digitalWrite pin %1 %2",
+      args0: [
+        { type: "field_number", name: "PIN", value: 13 },
+        {
+          type: "field_dropdown",
+          name: "VAL",
+          options: [
+            ["HIGH", "HIGH"],
+            ["LOW", "LOW"],
+          ],
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#E67E22",
+    },
+    {
+      type: "rb_digital_read",
+      message0: "digitalRead pin %1",
+      args0: [{ type: "field_number", name: "PIN", value: 2 }],
+      output: "Boolean",
+      colour: "#E67E22",
+    },
+    {
+      type: "rb_analog_read",
+      message0: "analogRead pin %1",
+      args0: [{ type: "field_number", name: "PIN", value: 0 }],
+      output: "Number",
+      colour: "#E67E22",
+    },
+    {
+      type: "rb_analog_write",
+      message0: "analogWrite pin %1 value %2",
+      args0: [
+        { type: "field_number", name: "PIN", value: 9 },
+        { type: "field_number", name: "VAL", value: 128, min: 0, max: 255 },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#E67E22",
+    },
+    {
+      type: "rb_delay",
+      message0: "wait %1 ms",
+      args0: [{ type: "field_number", name: "MS", value: 500, min: 0 }],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#9B59B6",
+    },
+    {
+      type: "rb_led_on",
+      message0: "turn LED on pin %1 ON",
+      args0: [{ type: "field_number", name: "PIN", value: 13 }],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#F1C40F",
+    },
+    {
+      type: "rb_led_off",
+      message0: "turn LED on pin %1 OFF",
+      args0: [{ type: "field_number", name: "PIN", value: 13 }],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#F1C40F",
+    },
+    {
+      type: "rb_servo_write",
+      message0: "set servo pin %1 to %2°",
+      args0: [
+        { type: "field_number", name: "PIN", value: 9 },
+        { type: "field_number", name: "DEG", value: 90, min: 0, max: 180 },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#16A085",
+    },
+    {
+      type: "rb_serial_begin",
+      message0: "Serial begin %1",
+      args0: [{ type: "field_number", name: "BAUD", value: 9600 }],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#34495E",
+    },
+    {
+      type: "rb_serial_print",
+      message0: "Serial print %1",
+      args0: [{ type: "input_value", name: "MSG" }],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#34495E",
+    },
+    {
+      type: "rb_wifi_connect",
+      message0: "Wi-Fi connect SSID %1 password %2",
+      args0: [
+        { type: "field_input", name: "SSID", text: "MyWiFi" },
+        { type: "field_input", name: "PASS", text: "password" },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#3498DB",
+    },
+    {
+      type: "rb_bt_begin",
+      message0: "Bluetooth begin name %1",
+      args0: [{ type: "field_input", name: "NAME", text: "RoboBT" }],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#2980B9",
+    },
+    {
+      type: "rb_bt_send",
+      message0: "Bluetooth send %1",
+      args0: [{ type: "input_value", name: "MSG" }],
+      previousStatement: null,
+      nextStatement: null,
+      colour: "#2980B9",
+    },
+  ];
+
+  for (const def of defs) {
+    Blockly.Blocks[def.type] = {
+      init: function () {
+        (this as { jsonInit: (d: unknown) => void }).jsonInit(def);
+      },
+    };
+  }
+}
+function safeArduinoName(name: string) {
+  const cleaned = name.replace(/[^a-zA-Z0-9_]/g, "_");
+
+  if (/^[0-9]/.test(cleaned)) {
+    return `var_${cleaned}`;
+  }
+
+  return cleaned || "myVariable";
+}
+
+function getVariableName(block: {
+  getField: (name: string) => { getText: () => string } | null;
+}) {
+  const field = block.getField("VAR");
+  return safeArduinoName(field?.getText() ?? "myVariable");
+}
+
+function registerArduinoGenerators() {
+  javascriptGenerator.forBlock["variables_set"] = function (block) {
+    const varName = getVariableName(block);
+    const value = javascriptGenerator.valueToCode(block, "VALUE", 0) || "0";
+    return `${varName} = ${value};\n`;
+  };
+
+  javascriptGenerator.forBlock["math_change"] = function (block) {
+    const varName = getVariableName(block);
+    const value = javascriptGenerator.valueToCode(block, "DELTA", 0) || "1";
+    return `${varName} += ${value};\n`;
+  };
+
+  javascriptGenerator.forBlock["variables_get"] = function (block) {
+    const varName = getVariableName(block);
+    return [varName, 0];
+  };
+
+  javascriptGenerator.forBlock["rb_forever"] = function (block) {
+    const body = javascriptGenerator.statementToCode(block, "DO");
+    window._loopCode = body;
+    return "";
+  };
+
+  javascriptGenerator.forBlock["rb_when_start"] = function (block) {
+    window._setupCode = javascriptGenerator.statementToCode(block, "DO");
+    return "";
+  };
+
+  javascriptGenerator.forBlock["controls_whileUntil"] = function (block) {
+    const mode = block.getFieldValue("MODE");
+    const condition =
+      javascriptGenerator.valueToCode(block, "BOOL", 0) || "true";
+    const body = javascriptGenerator.statementToCode(block, "DO");
+
+    if (mode === "WHILE" && condition === "true") {
+      window._loopCode = body;
+      return "";
+    }
+
+    return `while (${condition}) {\n${body}}\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_set_digital_pin"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    const val = block.getFieldValue("VALUE");
+    return `digitalWrite(${pin}, ${val});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_read_digital_pin"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    return [`digitalRead(${pin})`, 0];
+  };
+
+  javascriptGenerator.forBlock["rb_read_analog_pin"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    return [`analogRead(${pin})`, 0];
+  };
+
+  javascriptGenerator.forBlock["rb_set_pwm_pin"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    const val = block.getFieldValue("VALUE");
+    return `analogWrite(${pin}, ${val});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_play_tone"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    const note = block.getFieldValue("NOTE");
+    return `tone(${pin}, ${note});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_get_timer"] = function () {
+    return ["millis()", 0];
+  };
+
+  javascriptGenerator.forBlock["rb_reset_timer"] = function () {
+    return `// reset timer placeholder\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_pin_mode"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    const mode = block.getFieldValue("MODE");
+    return `pinMode(${pin}, ${mode});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_digital_write"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    const val = block.getFieldValue("VAL");
+    return `digitalWrite(${pin}, ${val});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_digital_read"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    return [`digitalRead(${pin})`, 0];
+  };
+
+  javascriptGenerator.forBlock["rb_analog_read"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    return [`analogRead(${pin})`, 0];
+  };
+
+  javascriptGenerator.forBlock["rb_analog_write"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    const val = block.getFieldValue("VAL");
+    return `analogWrite(${pin}, ${val});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_delay"] = function (block) {
+    const ms = block.getFieldValue("MS");
+    return `delay(${ms});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_led_on"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    return `digitalWrite(${pin}, HIGH);\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_led_off"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    return `digitalWrite(${pin}, LOW);\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_servo_write"] = function (block) {
+    const pin = block.getFieldValue("PIN");
+    const deg = block.getFieldValue("DEG");
+    return `// Servo on pin ${pin}\nservo.write(${deg});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_serial_begin"] = function (block) {
+    const baud = block.getFieldValue("BAUD");
+    return `Serial.begin(${baud});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_serial_print"] = function (block) {
+    const msg = javascriptGenerator.valueToCode(block, "MSG", 0) || `"Hello"`;
+    return `Serial.println(${msg});\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_map_value"] = function (block) {
+    const value = javascriptGenerator.valueToCode(block, "VALUE", 0) || "0";
+    const fromLow = block.getFieldValue("FROM_LOW");
+    const fromHigh = block.getFieldValue("FROM_HIGH");
+    const toLow = block.getFieldValue("TO_LOW");
+    const toHigh = block.getFieldValue("TO_HIGH");
+
+    return [`map(${value}, ${fromLow}, ${fromHigh}, ${toLow}, ${toHigh})`, 0];
+  };
+
+  javascriptGenerator.forBlock["rb_wifi_connect"] = function (block) {
+    const ssid = block.getFieldValue("SSID");
+    const pass = block.getFieldValue("PASS");
+    return `WiFi.begin("${ssid}", "${pass}");\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_bt_begin"] = function (block) {
+    const name = block.getFieldValue("NAME");
+    return `SerialBT.begin("${name}");\n`;
+  };
+
+  javascriptGenerator.forBlock["rb_bt_send"] = function (block) {
+    const msg = javascriptGenerator.valueToCode(block, "MSG", 0) || `"Hello"`;
+    return `SerialBT.println(${msg});\n`;
+  };
+}
+export function BlocklyWorkspace({ board, initialXml, onChange }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const workspaceRef = useRef<WorkspaceSvg | null>(null);
+  const onChangeRef = useRef(onChange);
+  const initialXmlRef = useRef(initialXml);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !containerRef.current) return;
+
+    let disposed = false;
+    let ws: WorkspaceSvg | null = null;
+    let loaded = false;
+
+    async function setupBlockly() {
+      const Blockly = await import("blockly");
+
+      if (disposed || !containerRef.current) return;
+
+      registerCustomBlocks(Blockly);
+      registerArduinoGenerators();
+
+      ws = Blockly.inject(containerRef.current, {
+        toolbox: buildToolbox(board),
+        grid: { spacing: 20, length: 3, colour: "#ccc", snap: true },
+        zoom: {
+          controls: true,
+          wheel: true,
+          startScale: 0.9,
+          maxScale: 2,
+          minScale: 0.4,
+        },
+        trashcan: true,
+        renderer: "zelos",
+        move: { scrollbars: true, drag: true, wheel: false },
+      });
+
+      workspaceRef.current = ws;
+
+      const setupToolboxToggle = () => {
+        const toolbox = document.querySelector(".blocklyToolboxDiv");
+
+        if (!toolbox) return undefined;
+
+        toolbox.classList.add("rb-toolbox-collapsed");
+
+        const openToolbox = () => {
+          toolbox.classList.add("rb-toolbox-open");
+
+          setTimeout(() => {
+            if (ws) Blockly.svgResize(ws);
+          }, 50);
+        };
+
+        const closeToolbox = () => {
+          toolbox.classList.remove("rb-toolbox-open");
+
+          setTimeout(() => {
+            if (ws) Blockly.svgResize(ws);
+          }, 50);
+        };
+
+        const stopCloseFromToolbox = (event: Event) => {
+          event.stopPropagation();
+        };
+
+        toolbox.addEventListener("pointerdown", stopCloseFromToolbox);
+        toolbox.addEventListener("click", openToolbox);
+
+        const workspaceEl = containerRef.current;
+        workspaceEl?.addEventListener("pointerdown", closeToolbox);
+
+        return () => {
+          toolbox.removeEventListener("pointerdown", stopCloseFromToolbox);
+          toolbox.removeEventListener("click", openToolbox);
+          workspaceEl?.removeEventListener("pointerdown", closeToolbox);
+        };
+      };
+
+      const cleanupToolbox = setupToolboxToggle();
+
+      window.getCode = () => {
+        if (!ws) return "";
+
+        const dom = Blockly.Xml.workspaceToDom(ws);
+        const xml = Blockly.Xml.domToText(dom);
+        console.log("XML:", xml);
+
+        window._setupCode = "";
+        window._loopCode = "";
+
+        const looseCode = javascriptGenerator.workspaceToCode(ws);
+        const vars = Blockly.Variables.allUsedVarModels(ws);
+        const varDefs = vars
+          .map((v) => `int ${safeArduinoName(v.getName())} = 0;`)
+          .join("\n");
+        const setup = window._setupCode || "";
+        const loop = window._loopCode || looseCode || "";
+
+        const fullCode = `
+${varDefs}
+void setup() {
+${setup}
+}
+
+void loop() {
+${loop}
+}
+`;
+
+        console.log("Arduino Code:", fullCode);
+        return fullCode;
+      };
+
+      const xmlToLoad = initialXmlRef.current;
+
+      if (xmlToLoad) {
+        try {
+          const dom = Blockly.utils.xml.textToDom(xmlToLoad);
+          Blockly.Xml.domToWorkspace(dom, ws);
+        } catch {
+          // ignore corrupt saved xml
+        }
+      }
+
+      loaded = true;
+
+      ws.addChangeListener((event: { isUiEvent?: boolean }) => {
+        if (!loaded) return;
+        if (event?.isUiEvent) return;
+        if (!onChangeRef.current || !ws) return;
+
+        const dom = Blockly.Xml.workspaceToDom(ws);
+        onChangeRef.current(Blockly.Xml.domToText(dom));
+      });
+
+      const resize = () => {
+        if (ws) Blockly.svgResize(ws);
+      };
+
+      window.addEventListener("resize", resize);
+      setTimeout(resize, 0);
+
+      ws.addChangeListener(() => resize());
+
+      return () => {
+        window.removeEventListener("resize", resize);
+        cleanupToolbox?.();
+      };
+    }
+
+    let cleanup: (() => void) | undefined;
+
+    setupBlockly().then((cleanupFn) => {
+      cleanup = cleanupFn;
+    });
+
+    return () => {
+      disposed = true;
+      cleanup?.();
+
+      if (ws) {
+        ws.dispose();
+      }
+    };
+  }, [board]);
+
+  return <div ref={containerRef} className="absolute inset-0" />;
+}
+
+================================================================================
+FILE: hooks\use-mobile.tsx
+================================================================================
+
+import * as React from "react";
+
+const MOBILE_BREAKPOINT = 768;
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    };
+    mql.addEventListener("change", onChange);
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return !!isMobile;
+}
+
+
+================================================================================
+FILE: index.css
+================================================================================
+
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+    --code-bg: #1f2028;
+    --accent: #c084fc;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-border: rgba(192, 132, 252, 0.5);
+    --social-bg: rgba(47, 48, 58, 0.5);
+    --shadow:
+      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  }
+
+  #social .button-icon {
+    filter: invert(1) brightness(2);
+  }
+}
+
+#root {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
+
+
+================================================================================
+FILE: lib\arduinoCompile.ts
+================================================================================
+
+export async function compileArduinoCode(params: {
+  code: string;
+  board: "uno" | "nano";
+}) {
+  let response: Response;
+
+  try {
+    response = await fetch("http://192.168.2.11:8787/compile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params),
+    });
+  } catch (e) {
+    throw new Error(
+      `Network error: ${e instanceof Error ? e.message : String(e)}`,
+      { cause: e },
+    );
+  }
+
+  const text = await response.text();
+
+  let data: {
+    ok?: boolean;
+    hex?: string;
+    error?: string;
+  };
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Invalid server response: ${text}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || "Compile failed");
+  }
+
+  if (!data.hex) {
+    throw new Error("Compile succeeded but HEX is missing");
+  }
+
+  return data.hex;
+}
+
+
+================================================================================
+FILE: lib\blocks.ts
+================================================================================
+
+export type BoardType = "uno" | "nano" | "esp32";
+
+export const BOARDS: Record<BoardType, { name: string; tagline: string; emoji: string }> = {
+  uno: { name: "Arduino Uno", tagline: "The classic starter board", emoji: "🔵" },
+  nano: { name: "Arduino Nano", tagline: "Tiny but mighty", emoji: "🟢" },
+  esp32: { name: "ESP32", tagline: "Wi-Fi + Bluetooth power", emoji: "🟣" },
+};
+
+export type BlockCategoryId =
+  | "logic"
+  | "loop"
+  | "math"
+  | "variables"
+  | "functions"
+  | "io"
+  | "analog"
+  | "time"
+  | "sensors"
+  | "servo"
+  | "motor"
+  | "buzzer"
+  | "led"
+  | "bluetooth"
+  | "wifi"
+  | "serial"
+  | "display";
+
+export interface BlockCategory {
+  id: BlockCategoryId;
+  label: string;
+  icon: string;
+  colorVar: string; // tailwind class suffix
+  blocks: BlockDef[];
+  boards?: BoardType[]; // restrict to boards (undefined = all)
+}
+
+export interface BlockDef {
+  id: string;
+  label: string;
+  shape?: "hat" | "stack" | "c" | "reporter";
+}
+
+export const CATEGORIES: BlockCategory[] = [
+  {
+    id: "logic",
+    label: "Logic",
+    icon: "🧠",
+    colorVar: "cat-logic",
+    blocks: [
+      { id: "if", label: "if ◇ then", shape: "c" },
+      { id: "ifelse", label: "if ◇ then / else", shape: "c" },
+      { id: "and", label: "◇ and ◇", shape: "reporter" },
+      { id: "or", label: "◇ or ◇", shape: "reporter" },
+      { id: "not", label: "not ◇", shape: "reporter" },
+      { id: "eq", label: "◇ = ◇", shape: "reporter" },
+    ],
+  },
+  {
+    id: "loop",
+    label: "Loops",
+    icon: "🔁",
+    colorVar: "cat-loop",
+    blocks: [
+      { id: "forever", label: "forever", shape: "c" },
+      { id: "repeat", label: "repeat (10)", shape: "c" },
+      { id: "while", label: "while ◇", shape: "c" },
+    ],
+  },
+  {
+    id: "math",
+    label: "Math",
+    icon: "➕",
+    colorVar: "cat-math",
+    blocks: [
+      { id: "num", label: "(0)", shape: "reporter" },
+      { id: "add", label: "◇ + ◇", shape: "reporter" },
+      { id: "sub", label: "◇ − ◇", shape: "reporter" },
+      { id: "mul", label: "◇ × ◇", shape: "reporter" },
+      { id: "rand", label: "random 1 to 10", shape: "reporter" },
+    ],
+  },
+  {
+    id: "variables",
+    label: "Variables",
+    icon: "📦",
+    colorVar: "cat-variables",
+    blocks: [
+      { id: "set", label: "set [x] to (0)", shape: "stack" },
+      { id: "change", label: "change [x] by (1)", shape: "stack" },
+      { id: "get", label: "(x)", shape: "reporter" },
+    ],
+  },
+  {
+    id: "functions",
+    label: "Functions",
+    icon: "🧩",
+    colorVar: "cat-functions",
+    blocks: [
+      { id: "def", label: "define myBlock", shape: "hat" },
+      { id: "call", label: "call myBlock", shape: "stack" },
+    ],
+  },
+  {
+    id: "io",
+    label: "Digital I/O",
+    icon: "⚡",
+    colorVar: "cat-io",
+    blocks: [
+      { id: "pinmode", label: "pinMode (13) as OUTPUT", shape: "stack" },
+      { id: "dwrite", label: "digitalWrite (13) HIGH", shape: "stack" },
+      { id: "dread", label: "digitalRead (2)", shape: "reporter" },
+    ],
+  },
+  {
+    id: "analog",
+    label: "Analog I/O",
+    icon: "📈",
+    colorVar: "cat-analog",
+    blocks: [
+      { id: "aread", label: "analogRead (A0)", shape: "reporter" },
+      { id: "awrite", label: "analogWrite (9) (128)", shape: "stack" },
+    ],
+  },
+  {
+    id: "time",
+    label: "Timing",
+    icon: "⏱️",
+    colorVar: "cat-time",
+    blocks: [
+      { id: "delay", label: "wait (1) seconds", shape: "stack" },
+      { id: "delayms", label: "wait (500) ms", shape: "stack" },
+      { id: "millis", label: "millis", shape: "reporter" },
+    ],
+  },
+  {
+    id: "sensors",
+    label: "Sensors",
+    icon: "🌡️",
+    colorVar: "cat-sensors",
+    blocks: [
+      { id: "ultra", label: "ultrasonic distance (cm)", shape: "reporter" },
+      { id: "temp", label: "temperature (°C)", shape: "reporter" },
+      { id: "ldr", label: "light sensor", shape: "reporter" },
+    ],
+  },
+  {
+    id: "servo",
+    label: "Servo",
+    icon: "🦾",
+    colorVar: "cat-servo",
+    blocks: [
+      { id: "servoAttach", label: "attach servo on pin (9)", shape: "stack" },
+      { id: "servoWrite", label: "set servo to (90)°", shape: "stack" },
+    ],
+  },
+  {
+    id: "motor",
+    label: "DC Motor",
+    icon: "⚙️",
+    colorVar: "cat-motor",
+    blocks: [
+      { id: "motorFwd", label: "motor forward at (200)", shape: "stack" },
+      { id: "motorBwd", label: "motor backward at (200)", shape: "stack" },
+      { id: "motorStop", label: "stop motor", shape: "stack" },
+    ],
+  },
+  {
+    id: "buzzer",
+    label: "Buzzer",
+    icon: "🔔",
+    colorVar: "cat-buzzer",
+    blocks: [
+      { id: "tone", label: "play tone (1000) Hz on pin (8)", shape: "stack" },
+      { id: "noTone", label: "stop tone on pin (8)", shape: "stack" },
+    ],
+  },
+  {
+    id: "led",
+    label: "LEDs",
+    icon: "💡",
+    colorVar: "cat-led",
+    blocks: [
+      { id: "ledOn", label: "turn LED on pin (13) ON", shape: "stack" },
+      { id: "ledOff", label: "turn LED on pin (13) OFF", shape: "stack" },
+      { id: "blink", label: "blink LED on pin (13) (500) ms", shape: "stack" },
+    ],
+  },
+  {
+    id: "serial",
+    label: "Serial",
+    icon: "💬",
+    colorVar: "cat-serial",
+    blocks: [
+      { id: "sBegin", label: "Serial begin (9600)", shape: "stack" },
+      { id: "sPrint", label: "Serial print [Hello]", shape: "stack" },
+    ],
+  },
+  {
+    id: "display",
+    label: "LCD / Display",
+    icon: "🖥️",
+    colorVar: "cat-display",
+    blocks: [
+      { id: "lcdInit", label: "init LCD 16x2", shape: "stack" },
+      { id: "lcdPrint", label: "LCD print [Hi!] at (0,0)", shape: "stack" },
+    ],
+  },
+  {
+    id: "bluetooth",
+    label: "Bluetooth",
+    icon: "📶",
+    colorVar: "cat-bluetooth",
+    boards: ["esp32"],
+    blocks: [
+      { id: "btBegin", label: "Bluetooth begin [RoboBT]", shape: "stack" },
+      { id: "btSend", label: "Bluetooth send [Hello]", shape: "stack" },
+      { id: "btRead", label: "Bluetooth received", shape: "reporter" },
+    ],
+  },
+  {
+    id: "wifi",
+    label: "Wi-Fi",
+    icon: "📡",
+    colorVar: "cat-wifi",
+    boards: ["esp32"],
+    blocks: [
+      { id: "wifiConnect", label: "Wi-Fi connect [SSID] [PASS]", shape: "stack" },
+      { id: "wifiStatus", label: "Wi-Fi connected?", shape: "reporter" },
+      { id: "httpGet", label: "HTTP GET [url]", shape: "stack" },
+    ],
+  },
+];
+
+export function categoriesForBoard(board: BoardType): BlockCategory[] {
+  return CATEGORIES.filter((c) => !c.boards || c.boards.includes(board));
+}
+
+
+================================================================================
+FILE: lib\projects.ts
+================================================================================
+
+import { useEffect, useState, useCallback } from "react";
+import type { BoardType } from "./blocks";
+function generateId() {
+  return "id-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+}
+export interface WorkspaceBlock {
+  uid: string;
+  blockId: string;
+  category: string;
+  label: string;
+  x: number;
+  y: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  board: BoardType;
+  createdAt: number;
+  updatedAt: number;
+  blocks: WorkspaceBlock[];
+  xml?: string;
+}
+
+const KEY = "Anduino.projects.v1";
+
+function read(): Project[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function write(projects: Project[]) {
+  localStorage.setItem(KEY, JSON.stringify(projects));
+  window.dispatchEvent(new Event("Anduino:projects"));
+}
+
+export function useProjects() {
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  useEffect(() => {
+    const sync = () => setProjects(read());
+    sync();
+    window.addEventListener("Anduino:projects", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("Anduino:projects", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const create = useCallback((name: string, board: BoardType): Project => {
+    const p: Project = {
+      id: generateId(),
+      name,
+      board,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      blocks: [],
+    };
+    write([...read(), p]);
+    return p;
+  }, []);
+
+  const update = useCallback((id: string, patch: Partial<Project>) => {
+    write(read().map((p) => (p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p)));
+  }, []);
+
+  const remove = useCallback((id: string) => {
+    write(read().filter((p) => p.id !== id));
+  }, []);
+
+  const duplicate = useCallback((id: string) => {
+    const all = read();
+    const src = all.find((p) => p.id === id);
+    if (!src) return;
+    write([
+      ...all,
+      {
+        ...src,
+        id: generateId(),
+        name: src.name + " copy",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ]);
+  }, []);
+
+  return { projects, create, update, remove, duplicate };
+}
+
+export function getProject(id: string): Project | undefined {
+  return read().find((p) => p.id === id);
+}
+
+
+================================================================================
+FILE: lib\stk500Uploader.ts
+================================================================================
+
+import { usbService } from "./UsbConnection";
+
+function hexToBytes(hex: string): number[] {
+  const lines = hex.split("\n");
+  const bytes: number[] = [];
+
+  for (const line of lines) {
+    if (!line.startsWith(":")) continue;
+
+    const length = parseInt(line.substr(1, 2), 16);
+    const address = parseInt(line.substr(3, 4), 16);
+    const type = parseInt(line.substr(7, 2), 16);
+
+    if (type !== 0) continue;
+
+    for (let i = 0; i < length; i++) {
+      const byte = parseInt(line.substr(9 + i * 2, 2), 16);
+      bytes[address + i] = byte;
+    }
+  }
+
+  return bytes;
+}
+
+async function stk500Command(cmd: number[]) {
+  await usbService.writeBytes(cmd);
+
+  const res = await usbService.readBytes();
+  return res.data;
+}
+
+export async function uploadHex(hex: string, baudRate = 115200) {
+  console.log("Uploading with baud rate:", baudRate);
+
+  const bytes = hexToBytes(hex);
+
+  await usbService.stopReading();
+
+  // reset again قبل upload
+  await usbService.setDTR(false);
+  await new Promise((r) => setTimeout(r, 100));
+  await usbService.setDTR(true);
+  await new Promise((r) => setTimeout(r, 800));
+
+  // SYNC
+  await stk500Command([0x30, 0x20]);
+
+  // ENTER PROG MODE
+  await stk500Command([0x50, 0x20]);
+
+  let address = 0;
+  const pageSize = 128;
+
+  while (address < bytes.length) {
+    const chunk = bytes.slice(address, address + pageSize);
+
+    const addr = address / 2;
+    await stk500Command([0x55, addr & 0xff, (addr >> 8) & 0xff, 0x20]);
+
+    const size = chunk.length;
+
+    await usbService.writeBytes([
+      0x64,
+      (size >> 8) & 0xff,
+      size & 0xff,
+      0x46,
+      ...chunk,
+      0x20,
+    ]);
+
+    await usbService.readBytes();
+
+    address += pageSize;
+  }
+
+  await stk500Command([0x51, 0x20]);
+}
+
+
+================================================================================
+FILE: lib\UsbConnection.ts
+================================================================================
+
+import { UsbSerial } from "capacitor-usb-serial";
+import { UsbSerialNative } from "./usbSerialExtra";
+
+export interface UsbDevice {
+  deviceId: number;
+  vendorId: number;
+  productId: number;
+  deviceName?: string;
+  deviceKey?: string;
+}
+
+type Listener = () => void;
+type DataListener = (data: string) => void;
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
+class UsbService {
+  private portKey: string | null = null;
+  private device: UsbDevice | null = null;
+  private connecting = false;
+  private listeners: Listener[] = [];
+  private reading = false;
+  private readLoopActive = false;
+  private onData: DataListener | null = null;
+
+  private logs: string[] = [];
+  private terminal: string[] = [];
+
+  subscribe(fn: Listener) {
+    this.listeners.push(fn);
+
+    return () => {
+      this.listeners = this.listeners.filter((listener) => listener !== fn);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((listener) => listener());
+  }
+
+  getState() {
+    return {
+      portKey: this.portKey,
+      device: this.device,
+      connected: Boolean(this.portKey),
+      connecting: this.connecting,
+      reading: this.reading,
+    };
+  }
+
+  getLogs() {
+    return this.logs;
+  }
+
+  getTerminal() {
+    return this.terminal;
+  }
+
+  addLog(message: string) {
+    this.logs = [
+      `${new Date().toLocaleTimeString()} — ${message}`,
+      ...this.logs,
+    ];
+    this.notify();
+  }
+
+  addTerminal(data: string) {
+    this.terminal = [...this.terminal, data];
+    this.notify();
+  }
+
+  clearLogs() {
+    this.logs = [];
+    this.notify();
+  }
+
+  clearTerminal() {
+    this.terminal = [];
+    this.notify();
+  }
+
+  async scan(): Promise<UsbDevice[]> {
+    const result = await UsbSerial.getDeviceConnections();
+    return result.devices ?? [];
+  }
+
+  async connect(device: UsbDevice) {
+    if (this.connecting) {
+      throw new Error("Connection already in progress");
+    }
+
+    if (this.portKey) {
+      throw new Error("USB device is already connected");
+    }
+
+    const key = device.deviceKey || String(device.deviceId);
+
+    this.connecting = true;
+    this.notify();
+
+    try {
+      await withTimeout(
+        UsbSerial.openConnection({
+          deviceId: device.deviceId,
+          baudRate: 115200,
+          dataBits: 8,
+          stopBits: 1,
+          parity: "none",
+        }),
+        5000,
+        "Connection timeout",
+      );
+
+      this.portKey = key;
+      this.device = device;
+      this.notify();
+    } catch (e) {
+      this.portKey = null;
+      this.device = null;
+      throw e;
+    } finally {
+      this.connecting = false;
+      this.notify();
+    }
+  }
+
+  async disconnect() {
+    if (!this.portKey) return;
+
+    const key = this.portKey;
+
+    this.stopReading();
+
+    this.portKey = null;
+    this.device = null;
+    this.notify();
+
+    try {
+      await withTimeout(
+        UsbSerial.endConnection({ key }),
+        3000,
+        "Disconnect timeout",
+      );
+    } catch (e) {
+      console.error("Disconnect error:", e);
+    }
+  }
+
+  async send(message: string) {
+    if (!this.portKey) {
+      throw new Error("Not connected");
+    }
+
+    await withTimeout(
+      UsbSerial.write({
+        key: this.portKey,
+        message,
+        noRead: true,
+      }),
+      3000,
+      "Send timeout",
+    );
+  }
+
+  async read() {
+    if (!this.portKey) {
+      throw new Error("Not connected");
+    }
+
+    return withTimeout(
+      UsbSerial.read({
+        key: this.portKey,
+      }),
+      1500,
+      "Read timeout",
+    );
+  }
+
+  startReading(callback?: DataListener) {
+    if (!this.portKey) return;
+
+    this.onData = callback ?? null;
+
+    if (this.readLoopActive) {
+      this.reading = true;
+      this.notify();
+      return;
+    }
+
+    this.reading = true;
+    this.readLoopActive = true;
+    this.notify();
+
+    void this.readLoop();
+  }
+
+  stopReading() {
+    this.reading = false;
+    this.onData = null;
+    this.notify();
+  }
+
+  private async readLoop() {
+    while (this.reading && this.portKey) {
+      try {
+        const result = await this.read();
+        const data = result?.data || "";
+
+        if (data) {
+          this.addTerminal(data);
+
+          if (this.onData) {
+            this.onData(data);
+          }
+        }
+      } catch (e) {
+        const message = String(e);
+
+        if (!message.includes("Read timeout")) {
+          console.error("Read loop error:", e);
+          this.reading = false;
+        }
+      }
+    }
+
+    this.readLoopActive = false;
+    this.notify();
+  }
+
+  async writeBytes(data: number[]) {
+    if (!this.portKey) {
+      throw new Error("Not connected");
+    }
+
+    await UsbSerialNative.writeBytes({
+      key: this.portKey,
+      data,
+    });
+  }
+
+  async readBytes() {
+    if (!this.portKey) {
+      throw new Error("Not connected");
+    }
+
+    return UsbSerialNative.readBytes({
+      key: this.portKey,
+    });
+  }
+
+  async setDTR(value: boolean) {
+    if (!this.portKey) {
+      throw new Error("Not connected");
+    }
+
+    await UsbSerialNative.setDTR({
+      key: this.portKey,
+      value,
+    });
+  }
+}
+
+export const usbService = new UsbService();
+
+
+================================================================================
+FILE: lib\usbSerialExtra.ts
+================================================================================
+
+import { UsbSerial } from "capacitor-usb-serial";
+
+type UsbSerialExtra = typeof UsbSerial & {
+  writeBytes(options: { key: string; data: number[] }): Promise<void>;
+
+  readBytes(options: { key: string }): Promise<{
+    data: number[];
+    length: number;
+  }>;
+
+  setDTR(options: { key: string; value: boolean }): Promise<void>;
+};
+
+export const UsbSerialNative = UsbSerial as UsbSerialExtra;
+
+
+================================================================================
+FILE: lib\utils.ts
+================================================================================
+
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+
+================================================================================
+FILE: main.tsx
+================================================================================
+
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./styles.css";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+
+
+================================================================================
+FILE: spa\ConnectPage.tsx
+================================================================================
+
+import { useEffect, useState } from "react";
+import type { Page } from "../App";
+import { usbService, type UsbDevice } from "../lib/UsbConnection";
+import {
+  ArrowLeft,
+  PlugZap,
+  RefreshCw,
+  Send,
+  Usb,
+  XCircle,
+} from "lucide-react";
+
+interface Props {
+  setPage: (page: Page) => void;
+  backTo?: Page;
+}
+
+function ConnectPage({ setPage, backTo }: Props) {
+  const [devices, setDevices] = useState<UsbDevice[]>([]);
+  const [command, setCommand] = useState("");
+  const [, forceUpdate] = useState(0);
+
+  const state = usbService.getState();
+  const log = usbService.getLogs();
+  const terminal = usbService.getTerminal();
+
+  useEffect(() => {
+    return usbService.subscribe(() => {
+      forceUpdate((x) => x + 1);
+    });
+  }, []);
+
+  const addLog = (msg: string) => {
+    usbService.addLog(msg);
+  };
+
+  const scan = async () => {
+    try {
+      addLog("Scanning...");
+      const found = await usbService.scan();
+      setDevices(found);
+      addLog(`Found ${found.length} device(s)`);
+    } catch (e) {
+      addLog(`Scan failed: ${String(e)}`);
+    }
+  };
+
+  const connect = async (device: UsbDevice) => {
+    try {
+      addLog("Connecting...");
+      await usbService.connect(device);
+      addLog(`Connected using key: ${device.deviceKey || device.deviceId}`);
+
+      try {
+        await usbService.setDTR(false);
+        addLog("DTR false OK");
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        await usbService.setDTR(true);
+        addLog("DTR true OK");
+        addLog("DTR toggled successfully");
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        await usbService.writeBytes([0x30, 0x20]);
+        addLog("Sent STK500 SYNC");
+
+        const res = await usbService.readBytes();
+        addLog("SYNC response: " + JSON.stringify(res.data));
+      } catch (e) {
+        addLog(`DTR failed: ${String(e)}`);
+      }
+
+      usbService.startReading();
+    } catch (e) {
+      addLog(`Connection failed: ${String(e)}`);
+    }
+  };
+
+  const disconnect = async () => {
+    await usbService.disconnect();
+    addLog("Disconnected");
+  };
+
+  const sendTest = async () => {
+    try {
+      await usbService.send("Hello from Anduino\n");
+      addLog("Sent test message");
+    } catch (e) {
+      addLog(`Send failed: ${String(e)}`);
+    }
+  };
+
+  const sendCommand = async () => {
+    const text = command.trim();
+
+    if (!text) return;
+
+    try {
+      await usbService.send(`${text}\n`);
+      addLog(`Sent: ${text}`);
+      setCommand("");
+    } catch (e) {
+      addLog(`Send failed: ${String(e)}`);
+    }
+  };
+
+  const read = async () => {
+    try {
+      const result = await usbService.read();
+      const data = result?.data || "";
+
+      if (data) {
+        usbService.addTerminal(data);
+      }
+
+      addLog(`Read: ${data || "(empty)"}`);
+    } catch (e) {
+      addLog(`Read failed: ${String(e)}`);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="flex items-center gap-3 p-4 border-b border-border">
+        <button
+          onClick={() => setPage(backTo ?? { name: "home" })}
+          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+
+        <h1 className="font-black text-xl">Connect Board</h1>
+      </header>
+
+      <main className="p-5 max-w-2xl mx-auto flex flex-col gap-4">
+        <div className="p-5 rounded-3xl bg-card border-2 border-border text-center">
+          <Usb className="w-8 h-8 mx-auto mb-3" />
+
+          <h2 className="font-black text-xl">USB OTG Connection</h2>
+
+          <p className="text-sm text-muted-foreground mt-2">
+            Status:{" "}
+            <span className="font-bold">
+              {state.connecting
+                ? "Connecting..."
+                : state.connected
+                  ? "Connected"
+                  : "Not connected"}
+            </span>
+          </p>
+
+          {state.device && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Device ID: {state.device.deviceId} • VID: {state.device.vendorId}{" "}
+              • PID: {state.device.productId}
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={scan}
+          disabled={state.connecting}
+          className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold disabled:opacity-40 flex items-center justify-center gap-2"
+        >
+          <RefreshCw
+            className={`w-5 h-5 ${state.connecting ? "animate-spin" : ""}`}
+          />
+          Scan USB Devices
+        </button>
+
+        {devices.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {devices.map((device) => (
+              <button
+                key={device.deviceKey || String(device.deviceId)}
+                onClick={() => connect(device)}
+                disabled={state.connecting || state.connected}
+                className="p-4 rounded-2xl bg-card border-2 border-border text-left disabled:opacity-50"
+              >
+                <div className="font-bold flex items-center gap-2">
+                  <PlugZap className="w-4 h-4" />
+                  {device.deviceName || "USB Device"}
+                </div>
+
+                <div className="text-xs text-muted-foreground mt-1">
+                  Device ID: {device.deviceId} • VID: {device.vendorId} • PID:{" "}
+                  {device.productId}
+                </div>
+
+                {device.deviceKey && (
+                  <div className="text-[10px] text-muted-foreground mt-1 break-all">
+                    Key: {device.deviceKey}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {state.connected && (
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={sendTest}
+              className="py-3 rounded-2xl bg-secondary font-bold flex items-center justify-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              Send
+            </button>
+
+            <button
+              onClick={read}
+              className="py-3 rounded-2xl bg-secondary font-bold"
+            >
+              Read
+            </button>
+
+            <button
+              onClick={disconnect}
+              className="py-3 rounded-2xl bg-destructive text-white font-bold flex items-center justify-center gap-2"
+            >
+              <XCircle className="w-4 h-4" />
+              Close
+            </button>
+          </div>
+        )}
+
+        {state.connected && (
+          <div className="flex gap-2">
+            <input
+              value={command}
+              onChange={(e) => setCommand(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") sendCommand();
+              }}
+              className="flex-1 px-3 py-3 rounded-xl border-2 border-border bg-card"
+              placeholder="Type command..."
+            />
+
+            <button
+              onClick={sendCommand}
+              className="px-4 py-3 rounded-xl bg-primary text-primary-foreground font-bold"
+            >
+              Send
+            </button>
+          </div>
+        )}
+
+        <div className="rounded-2xl bg-black text-green-400 p-4 h-40 overflow-auto text-xs font-mono text-left">
+          {terminal.length === 0 ? (
+            <div className="opacity-50">No serial data yet...</div>
+          ) : (
+            terminal.map((line, index) => <div key={index}>{line}</div>)
+          )}
+        </div>
+
+        <div className="rounded-2xl bg-card border-2 border-border p-4">
+          <h3 className="font-bold mb-2">Log</h3>
+
+          {log.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No activity yet.</p>
+          ) : (
+            <div className="flex flex-col gap-1 text-xs text-left">
+              {log.map((item, index) => (
+                <div key={`${item}-${index}`} className="text-muted-foreground">
+                  {item}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default ConnectPage;
+
+
+================================================================================
+FILE: spa\EditorPage.tsx
+================================================================================
+
+//await uploadHex(hex);
+import { useRef, useState } from "react";
+import { compileArduinoCode } from "../lib/arduinoCompile";
+import { uploadHex } from "../lib/stk500Uploader";
+import { usbService } from "../lib/UsbConnection";
+import type { Page } from "../App";
+import { BOARDS } from "../lib/blocks";
+import { getProject, useProjects } from "../lib/projects";
+import { BlocklyWorkspace } from "../components/BlocklyWorkspace";
+import {
+  ArrowLeft,
+  Check,
+  Code2,
+  Copy,
+  Download,
+  Play,
+  Settings,
+  Upload,
+  X,
+} from "lucide-react";
+
+interface Props {
+  id: string;
+  setPage: (page: Page) => void;
+}
+
+type UploadStatus = "idle" | "uploading" | "done" | "fail";
+type CopyStatus = "idle" | "copied" | "fail";
+
+type WindowWithCode = Window & {
+  getCode?: () => string;
+};
+
+function EditorPage({ id, setPage }: Props) {
+  const { update, remove } = useProjects();
+  const project = getProject(id);
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
+  const [projectName, setProjectName] = useState(project?.name ?? "");
+
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  if (!project) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-8 bg-background">
+        <p className="text-muted-foreground">Project not found.</p>
+
+        <button
+          onClick={() => setPage({ name: "projects" })}
+          className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold"
+        >
+          Back to projects
+        </button>
+      </div>
+    );
+  }
+
+  const handleXmlChange = (xml: string) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      update(project.id, { xml });
+    }, 300);
+  };
+
+  const getCurrentCode = () => {
+    const getCode = (window as WindowWithCode).getCode;
+    return typeof getCode === "function" ? getCode() : "";
+  };
+
+  const handleGenerateCode = () => {
+    setCopyStatus("idle");
+
+    try {
+      const code = getCurrentCode();
+
+      setGeneratedCode(
+        code.trim().length > 0
+          ? code
+          : "// Code generator is not ready yet.\n// Try again after the Blockly workspace loads.",
+      );
+
+      setShowCodeModal(true);
+    } catch (error) {
+      console.error("Generate code failed:", error);
+
+      setGeneratedCode(
+        "// Failed to generate Arduino code.\n// Check the browser console for details.",
+      );
+
+      setShowCodeModal(true);
+    }
+  };
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedCode);
+      setCopyStatus("copied");
+      setTimeout(() => setCopyStatus("idle"), 1500);
+    } catch (error) {
+      console.error("Copy failed:", error);
+      setCopyStatus("fail");
+    }
+  };
+
+  const handleDownloadIno = () => {
+    const code =
+      generatedCode.trim().length > 0 ? generatedCode : getCurrentCode();
+
+    if (!code || code.trim().length === 0) {
+      alert("No code to download");
+      return;
+    }
+
+    const safeName = project.name.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
+    const fileName = `${safeName || "arduino_code"}.ino`;
+
+    const blob = new Blob([code], {
+      type: "text/plain;charset=utf-8",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
+
+  const handleUpload = async () => {
+    const code = getCurrentCode();
+    const usbState = usbService.getState();
+
+    if (project.board === "esp32") {
+      alert("ESP32 upload is not supported yet. UNO/Nano only for now.");
+      return;
+    }
+
+    if (!code || code.trim().length === 0) {
+      alert("No code to upload");
+      return;
+    }
+
+    if (!usbState.connected) {
+      alert("Connect your Arduino first");
+      setPage({
+        name: "connect",
+        backTo: { name: "editor", id: project.id },
+      });
+      return;
+    }
+
+    setUploadStatus("uploading");
+
+    try {
+      const hex = await compileArduinoCode({
+        board: project.board === "nano" ? "nano" : "uno",
+        code,
+      });
+
+      console.log("HEX ready:", hex.slice(0, 200));
+      console.log("HEX length:", hex.length);
+
+      usbService.stopReading();
+
+      if (project.board === "nano") {
+        try {
+          await uploadHex(hex, 115200);
+        } catch (firstError) {
+          console.warn(
+            "Nano upload failed at 115200, retrying 57600...",
+            firstError,
+          );
+
+          await uploadHex(hex, 57600);
+        }
+      } else {
+        await uploadHex(hex, 115200);
+      }
+
+      setUploadStatus("done");
+      alert("Upload done 🚀");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+
+      console.error("Upload failed:", e);
+      setUploadStatus("fail");
+      alert(`Upload failed:\n${message}`);
+    }
+  };
+
+  const handleRename = (name: string) => {
+    setProjectName(name);
+    update(project.id, { name });
+  };
+
+  return (
+    <div className="relative h-[100dvh] w-full flex flex-col bg-background overflow-hidden">
+      <header className="shrink-0 flex items-center gap-2 px-3 py-2 bg-background border-b border-border z-20">
+        <button
+          onClick={() => setPage({ name: "projects" })}
+          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-sm truncate">{project.name}</div>
+          <div className="text-[10px] text-muted-foreground">
+            {BOARDS[project.board].name}
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowSettings(true)}
+          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center"
+          aria-label="Settings"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+      </header>
+
+      <div className="flex-1 relative min-h-0 w-full overflow-hidden">
+        <BlocklyWorkspace
+          board={project.board}
+          initialXml={project.xml}
+          onChange={handleXmlChange}
+        />
+      </div>
+
+      <div className="shrink-0 border-t border-border bg-background p-3 flex items-center gap-2 z-20">
+        <div
+          className={`text-xs font-semibold flex-1 ${
+            uploadStatus === "done"
+              ? "text-[oklch(0.55_0.18_145)]"
+              : uploadStatus === "fail"
+                ? "text-destructive"
+                : "text-muted-foreground"
+          }`}
+        >
+          {uploadStatus === "idle" && "Ready to upload"}
+          {uploadStatus === "uploading" && "Uploading to board…"}
+          {uploadStatus === "done" && "✓ Upload complete!"}
+          {uploadStatus === "fail" && "✗ Upload failed"}
+        </div>
+
+        <button
+          onClick={handleGenerateCode}
+          className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-bold flex items-center gap-1 active:scale-95 transition"
+        >
+          <Code2 className="w-4 h-4" />
+          Code
+        </button>
+
+        <button
+          onClick={() =>
+            setPage({
+              name: "connect",
+              backTo: { name: "editor", id: project.id },
+            })
+          }
+          className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-bold"
+        >
+          Connect
+        </button>
+
+        <button
+          onClick={handleUpload}
+          disabled={uploadStatus === "uploading"}
+          className="px-5 py-3 rounded-2xl bg-gradient-to-br from-[oklch(0.7_0.18_145)] to-[oklch(0.6_0.2_165)] text-white font-bold shadow-[var(--shadow-pop)] active:scale-95 transition flex items-center gap-2 disabled:opacity-60"
+        >
+          {uploadStatus === "uploading" ? (
+            <Play className="w-4 h-4 animate-pulse" />
+          ) : (
+            <Upload className="w-4 h-4" />
+          )}
+          Upload
+        </button>
+      </div>
+
+      {showCodeModal && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4"
+          onClick={() => setShowCodeModal(false)}
+        >
+          <div
+            className="bg-card rounded-3xl p-5 w-full max-w-2xl max-h-[88dvh] flex flex-col gap-3 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-2xl bg-secondary flex items-center justify-center">
+                <Code2 className="w-5 h-5" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold text-lg leading-tight">
+                  Arduino Code
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Generated from your blocks
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowCodeModal(false)}
+                className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center"
+                aria-label="Close code modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <pre className="flex-1 min-h-[260px] max-h-[55dvh] overflow-auto rounded-2xl bg-black text-white p-4 text-xs leading-relaxed text-left">
+              <code>{generatedCode}</code>
+            </pre>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={handleCopyCode}
+                className="py-3 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2"
+              >
+                {copyStatus === "copied" ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleDownloadIno}
+                className="py-3 rounded-xl bg-secondary font-bold flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                .ino
+              </button>
+
+              <button
+                onClick={() => setShowCodeModal(false)}
+                className="py-3 rounded-xl bg-secondary font-bold"
+              >
+                Done
+              </button>
+            </div>
+
+            {copyStatus === "fail" && (
+              <p className="text-xs text-destructive font-semibold">
+                Copy failed. Select the code manually and copy it.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4"
+          onClick={() => setShowSettings(false)}
+        >
+          <div
+            className="bg-card rounded-3xl p-5 w-full max-w-sm shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-bold text-lg mb-3">Project settings</h2>
+
+            <label className="text-xs font-semibold">Name</label>
+            <input
+              value={projectName}
+              onChange={(e) => handleRename(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border-2 border-border mt-1 mb-3 font-medium"
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="flex-1 py-3 rounded-xl bg-secondary font-bold"
+              >
+                Done
+              </button>
+
+              <button
+                onClick={() => {
+                  if (confirm("Delete this project?")) {
+                    remove(project.id);
+                    setPage({ name: "projects" });
+                  }
+                }}
+                className="px-4 py-3 rounded-xl bg-destructive/10 text-destructive font-bold"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default EditorPage;
+
+================================================================================
+FILE: spa\HelpPage.tsx
+================================================================================
+
+import type { Page } from "../App";
+import { ArrowLeft } from "lucide-react";
+
+interface Props {
+  setPage: (page: Page) => void;
+}
+
+function HelpPage({ setPage }: Props) {
+  const lessons = [
+    "Blink LED",
+    "Button controls LED",
+    "Buzzer sound",
+    "Servo movement",
+    "ESP32 Wi-Fi example",
+  ];
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="flex items-center gap-3 p-4 border-b border-border">
+        <button
+          onClick={() => setPage({ name: "home" })}
+          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <h1 className="font-black text-xl">Help</h1>
+      </header>
+
+      <main className="p-5 max-w-2xl mx-auto flex flex-col gap-3">
+        {lessons.map((lesson) => (
+          <div
+            key={lesson}
+            className="p-4 rounded-2xl bg-card border-2 border-border"
+          >
+            <h2 className="font-bold">{lesson}</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Tutorial coming soon.
+            </p>
+          </div>
+        ))}
+      </main>
+    </div>
+  );
+}
+
+export default HelpPage;
+
+
+================================================================================
+FILE: spa\HomePage.tsx
+================================================================================
+
+import type { Page } from "../App";
+
+type Props = {
+  setPage: (page: Page) => void;
+};
+
+export default function HomePage({ setPage }: Props) {
+  return (
+    <main className="min-h-screen bg-slate-950 text-white p-6">
+      <section className="max-w-5xl mx-auto py-10">
+        <div className="rounded-3xl bg-slate-900 p-8 border border-slate-800">
+          <p className="text-blue-400 font-semibold mb-3">Anduino</p>
+
+          <h1 className="text-4xl font-bold mb-4">
+            Block Coding for Arduino and ESP32
+          </h1>
+
+          <p className="text-slate-300 text-lg mb-8 max-w-2xl">
+            Build projects using blocks, generate Arduino code, then download
+            your .ino file.
+          </p>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setPage({ name: "new" })}
+              className="rounded-xl bg-blue-600 px-5 py-3 font-semibold"
+            >
+              New Project
+            </button>
+
+            <button
+              onClick={() => setPage({ name: "projects" })}
+              className="rounded-xl bg-slate-800 px-5 py-3 font-semibold"
+            >
+              My Projects
+            </button>
+
+            <button
+              onClick={() => setPage({ name: "connect" })}
+              className="rounded-xl bg-slate-800 px-5 py-3 font-semibold"
+            >
+              Connect Board
+            </button>
+
+            <button
+              onClick={() => setPage({ name: "help" })}
+              className="rounded-xl bg-slate-800 px-5 py-3 font-semibold"
+            >
+              Help
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+
+================================================================================
+FILE: spa\NewProjectPage.tsx
+================================================================================
+
+import { useState } from "react";
+import type { Page } from "../App";
+import { BOARDS, type BoardType } from "../lib/blocks";
+import { useProjects } from "../lib/projects";
+import { ArrowLeft, Cpu, Wifi, Bluetooth } from "lucide-react";
+
+interface Props {
+  setPage: (page: Page) => void;
+}
+
+const FEATURES: Record<BoardType, string[]> = {
+  uno: ["14 digital pins", "6 analog pins", "Beginner friendly"],
+  nano: ["Compact", "Breadboard-ready", "Same as Uno"],
+  esp32: ["Wi-Fi included", "Bluetooth", "Powerful dual-core"],
+};
+
+function NewProjectPage({ setPage }: Props) {
+  const { create } = useProjects();
+  const [board, setBoard] = useState<BoardType | null>(null);
+  const [name, setName] = useState("My Robot");
+
+  const start = () => {
+    if (!board) return;
+
+    const project = create(name.trim() || "Untitled", board);
+    setPage({ name: "editor", id: project.id });
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="flex items-center gap-3 p-4 border-b border-border">
+        <button
+          onClick={() => setPage({ name: "home" })}
+          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <h1 className="font-black text-xl">New Project</h1>
+      </header>
+
+      <main className="p-5 max-w-2xl mx-auto flex flex-col gap-5">
+        <div>
+          <label className="text-sm font-semibold">Project name</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="mt-2 w-full px-4 py-3 rounded-2xl bg-card border-2 border-border text-base font-medium focus:outline-none focus:border-primary"
+            placeholder="My Cool Robot"
+          />
+        </div>
+
+        <div>
+          <h2 className="text-sm font-semibold mb-3">Choose your board</h2>
+
+          <div className="flex flex-col gap-3">
+            {(Object.keys(BOARDS) as BoardType[]).map((b) => {
+              const selected = board === b;
+
+              return (
+                <button
+                  key={b}
+                  onClick={() => setBoard(b)}
+                  className={`text-left p-4 rounded-2xl border-2 bg-card transition-all active:scale-[0.98] ${
+                    selected
+                      ? "border-primary shadow-[var(--shadow-pop)]"
+                      : "border-border"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center text-3xl">
+                      {BOARDS[b].emoji}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">{BOARDS[b].name}</span>
+                        {b === "esp32" && (
+                          <>
+                            <Wifi className="w-4 h-4" />
+                            <Bluetooth className="w-4 h-4" />
+                          </>
+                        )}
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        {BOARDS[b].tagline}
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {FEATURES[b].map((f) => (
+                          <span
+                            key={f}
+                            className="text-[10px] px-2 py-0.5 rounded-full bg-secondary font-medium"
+                          >
+                            {f}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        selected ? "border-primary bg-primary" : "border-border"
+                      }`}
+                    >
+                      {selected && (
+                        <Cpu className="w-3.5 h-3.5 text-primary-foreground" />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={start}
+          disabled={!board}
+          className="mt-2 w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold text-base shadow-[var(--shadow-pop)] disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition"
+        >
+          Start Coding 🚀
+        </button>
+      </main>
+    </div>
+  );
+}
+
+export default NewProjectPage;
+
+
+================================================================================
+FILE: spa\ProjectsPage.tsx
+================================================================================
+
+import { useState } from "react";
+import type { Page } from "../App";
+import { useProjects } from "../lib/projects";
+import { BOARDS } from "../lib/blocks";
+import { ArrowLeft, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+
+interface Props {
+  setPage: (page: Page) => void;
+}
+
+function ProjectsPage({ setPage }: Props) {
+  const { projects, remove, duplicate, update } = useProjects();
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameVal, setRenameVal] = useState("");
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="flex items-center gap-3 p-4 border-b border-border">
+        <button
+          onClick={() => setPage({ name: "home" })}
+          className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <h1 className="font-black text-xl">My Projects</h1>
+      </header>
+
+      <main className="p-5 max-w-2xl mx-auto flex flex-col gap-3">
+        <button
+          onClick={() => setPage({ name: "new" })}
+          className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-primary text-primary-foreground font-bold shadow-[var(--shadow-pop)] active:scale-[0.98] transition"
+        >
+          <Plus className="w-5 h-5" />
+          New Project
+        </button>
+
+        {projects.length === 0 && (
+          <div className="text-center py-16 text-muted-foreground">
+            <div className="text-5xl mb-3">📭</div>
+            <p className="font-medium">No projects yet</p>
+            <p className="text-xs mt-1">Tap New Project to get started!</p>
+          </div>
+        )}
+
+        {projects.map((p) => (
+          <div
+            key={p.id}
+            className="bg-card border-2 border-border rounded-2xl p-4 flex items-center gap-3"
+          >
+            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center text-2xl">
+              {BOARDS[p.board].emoji}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              {renameId === p.id ? (
+                <input
+                  autoFocus
+                  value={renameVal}
+                  onChange={(e) => setRenameVal(e.target.value)}
+                  onBlur={() => {
+                    update(p.id, { name: renameVal || p.name });
+                    setRenameId(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  className="w-full px-2 py-1 rounded-md border border-primary bg-background text-sm font-bold"
+                />
+              ) : (
+                <button
+                  onClick={() => setPage({ name: "editor", id: p.id })}
+                  className="font-bold truncate block text-left"
+                >
+                  {p.name}
+                </button>
+              )}
+
+              <div className="text-xs text-muted-foreground">
+                {BOARDS[p.board].name} • {p.blocks.length} blocks
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setRenameId(p.id);
+                setRenameVal(p.name);
+              }}
+              className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/70"
+              aria-label="Rename"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => duplicate(p.id)}
+              className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/70"
+              aria-label="Duplicate"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => {
+                if (confirm(`Delete "${p.name}"?`)) remove(p.id);
+              }}
+              className="w-9 h-9 rounded-full bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/20"
+              aria-label="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </main>
+    </div>
+  );
+}
+
+export default ProjectsPage;
+
+
+================================================================================
+FILE: spa\storage.ts
+================================================================================
+
+export type BoardType = "Arduino Uno" | "Arduino Nano" | "ESP32";
+
+export type Project = {
+  id: string;
+  name: string;
+  board: BoardType;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const STORAGE_KEY = "Anduino_projects";
+
+export function generateId() {
+  return `project_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+export function readProjects(): Project[] {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return [];
+
+  try {
+    const data: unknown = JSON.parse(raw);
+    if (!Array.isArray(data)) return [];
+
+    return data.filter((item): item is Project => {
+      return (
+        typeof item === "object" &&
+        item !== null &&
+        "id" in item &&
+        "name" in item &&
+        "board" in item &&
+        "createdAt" in item &&
+        "updatedAt" in item &&
+        typeof item.id === "string" &&
+        typeof item.name === "string" &&
+        typeof item.board === "string" &&
+        typeof item.createdAt === "string" &&
+        typeof item.updatedAt === "string"
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+export function saveProjects(projects: Project[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+}
+
+export function getProject(id: string) {
+  return readProjects().find((project) => project.id === id);
+}
+
+export function createProject(name: string, board: BoardType) {
+  const now = new Date().toISOString();
+
+  const project: Project = {
+    id: generateId(),
+    name,
+    board,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const projects = readProjects();
+  saveProjects([project, ...projects]);
+
+  return project;
+}
+
+export function deleteProject(id: string) {
+  const projects = readProjects().filter((project) => project.id !== id);
+  saveProjects(projects);
+}
+
+
+================================================================================
+FILE: styles.css
+================================================================================
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --destructive: #ef4444;
+  --border: #e2e8f0;
+  --shadow-pop: 0 6px 0 rgba(15, 23, 42, 0.15),
+    0 10px 30px -10px rgba(79, 70, 229, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.bg-background {
+  background-color: var(--background);
+}
+
+.bg-card {
+  background-color: var(--card);
+}
+
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.bg-secondary {
+  background-color: var(--secondary);
+}
+
+.bg-muted {
+  background-color: var(--muted);
+}
+
+.bg-destructive {
+  background-color: var(--destructive);
+}
+
+.text-foreground {
+  color: var(--foreground);
+}
+
+.text-primary-foreground {
+  color: var(--primary-foreground);
+}
+
+.text-secondary-foreground {
+  color: var(--secondary-foreground);
+}
+
+.text-muted-foreground {
+  color: var(--muted-foreground);
+}
+
+.text-destructive {
+  color: var(--destructive);
+}
+
+.border-border {
+  border-color: var(--border);
+}
+
+.shadow-\[var\(--shadow-pop\)\] {
+  box-shadow: var(--shadow-pop);
+}
+
+
+.blocklyFlyoutScrollbar,
+.blocklyFlyoutScrollbar .blocklyScrollbarHandle,
+.blocklyFlyoutScrollbar .blocklyScrollbarBackground {
+  display: none !important;
+}
+
+.blocklyFlyout {
+  overflow: hidden !important;
+}
+
+.blocklyFlyout .blocklyScrollbarHandle,
+.blocklyFlyout .blocklyScrollbarBackground {
+  display: none !important;
+}
+.blocklyToolboxDiv.rb-toolbox-collapsed {
+  width: 28px !important;
+  overflow: hidden !important;
+  transition: width 0.2s ease;
+}
+
+.blocklyToolboxDiv.rb-toolbox-collapsed.rb-toolbox-open {
+  width: 250px !important;
+}
+
+.blocklyToolboxDiv.rb-toolbox-collapsed .blocklyTreeRow {
+  min-width: 250px !important;
+  padding-left: 0 !important;
+}
+
+.blocklyToolboxDiv.rb-toolbox-collapsed:not(.rb-toolbox-open) .blocklyTreeLabel {
+  opacity: 0 !important;
+}
+

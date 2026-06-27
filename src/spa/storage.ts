@@ -8,7 +8,7 @@ export type Project = {
   updatedAt: string;
 };
 
-const STORAGE_KEY = "Anduino_projects";
+const STORAGE_KEY = "RoboticsOnPhone_projects";
 
 export function generateId() {
   return `project_${Date.now()}_${Math.random().toString(16).slice(2)}`;

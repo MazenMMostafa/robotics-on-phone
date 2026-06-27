@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Anduino</string>
-    <string name="title_activity_main">Anduino</string>
-    <string name="package_name">com.Anduino.app</string>
-    <string name="custom_url_scheme">com.Anduino.app</string>
+    <string name="app_name">Robotics On Phone</string>
+    <string name="title_activity_main">Robotics On Phone</string>
+    <string name="package_name">com.roboticsonphone.app</string>
+    <string name="custom_url_scheme">com.roboticsonphone.app</string>
 </resources>

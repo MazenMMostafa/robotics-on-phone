@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.Anduino.app",
-  appName: "Anduino",
+  appId: "com.roboticsonphone.app",
+  appName: "Robotics On Phone",
   webDir: "dist",
   server: {
     androidScheme: "https",

@@ -793,7 +793,7 @@ function registerCustomBlocks(Blockly: typeof import("blockly")) {
     {
       type: "rb_bt_begin",
       message0: "Bluetooth begin name %1",
-      args0: [{ type: "field_input", name: "NAME", text: "AnduinoBT" }],
+      args0: [{ type: "field_input", name: "NAME", text: "RoboticsBT" }],
       previousStatement: null,
       nextStatement: null,
       colour: "#2980B9",

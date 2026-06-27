@@ -1,11 +1,11 @@
 android\app\src\androidTest\java\com\getcapacitor\myapp\ExampleInstrumentedTest.java
-android\app\src\main\assets\public\assets\blockly-DOfMiahI.js
-android\app\src\main\assets\public\assets\index-CfRUBO-9.css
-android\app\src\main\assets\public\assets\index-DuBg8juk.js
+android\app\src\main\assets\public\assets\blockly-Dgk3Oc5K.js
+android\app\src\main\assets\public\assets\index-mIJEILoi.css
+android\app\src\main\assets\public\assets\index-w1_QTH9C.js
 android\app\src\main\assets\public\cordova.js
 android\app\src\main\assets\public\cordova_plugins.js
 android\app\src\main\assets\public\index.html
-android\app\src\main\java\com\Anduino\app\MainActivity.java
+android\app\src\main\java\com\roboticsonphone\app\MainActivity.java
 android\app\src\test\java\com\getcapacitor\myapp\ExampleUnitTest.java
 capacitor.config.ts
 eslint.config.js

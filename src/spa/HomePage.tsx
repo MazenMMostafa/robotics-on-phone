@@ -9,7 +9,7 @@ export default function HomePage({ setPage }: Props) {
     <main className="min-h-screen bg-slate-950 text-white p-6">
       <section className="max-w-5xl mx-auto py-10">
         <div className="rounded-3xl bg-slate-900 p-8 border border-slate-800">
-          <p className="text-blue-400 font-semibold mb-3">Anduino</p>
+          <p className="text-blue-400 font-semibold mb-3">Robotics On Phone</p>
 
           <h1 className="text-4xl font-bold mb-4">
             Block Coding for Arduino and ESP32

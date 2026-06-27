@@ -46,7 +46,7 @@ app.post("/compile", async (req, res) => {
   }
 
   const id = crypto.randomUUID();
-  const sketchName = "AnduinoSketch";
+  const sketchName = "RoboticsOnPhoneSketch";
   const root = path.join(__dirname, "tmp", id);
   const sketchDir = path.join(root, sketchName);
   const buildPath = path.join(root, "build");
@@ -97,5 +97,5 @@ app.post("/compile", async (req, res) => {
 });
 
 app.listen(8787, "0.0.0.0", () => {
-  console.log("Anduino compile server running on http://0.0.0.0:8787");
+  console.log("Robotics On Phone compile server running on http://0.0.0.0:8787");
 });

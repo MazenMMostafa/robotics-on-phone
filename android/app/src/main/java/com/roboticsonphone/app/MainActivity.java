@@ -1,4 +1,4 @@
-package com.Anduino.app;
+package com.roboticsonphone.app;
 
 import com.getcapacitor.BridgeActivity;
 

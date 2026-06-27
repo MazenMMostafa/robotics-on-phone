@@ -22,7 +22,7 @@ export interface Project {
   xml?: string;
 }
 
-const KEY = "Anduino.projects.v1";
+const KEY = "RoboticsOnPhone.projects.v1";
 
 function read(): Project[] {
   if (typeof window === "undefined") return [];
@@ -35,7 +35,7 @@ function read(): Project[] {
 
 function write(projects: Project[]) {
   localStorage.setItem(KEY, JSON.stringify(projects));
-  window.dispatchEvent(new Event("Anduino:projects"));
+  window.dispatchEvent(new Event("RoboticsOnPhone:projects"));
 }
 
 export function useProjects() {
@@ -44,10 +44,10 @@ export function useProjects() {
   useEffect(() => {
     const sync = () => setProjects(read());
     sync();
-    window.addEventListener("Anduino:projects", sync);
+    window.addEventListener("RoboticsOnPhone:projects", sync);
     window.addEventListener("storage", sync);
     return () => {
-      window.removeEventListener("Anduino:projects", sync);
+      window.removeEventListener("RoboticsOnPhone:projects", sync);
       window.removeEventListener("storage", sync);
     };
   }, []);

@@ -84,7 +84,7 @@ function ConnectPage({ setPage, backTo }: Props) {
 
   const sendTest = async () => {
     try {
-      await usbService.send("Hello from Anduino\n");
+      await usbService.send("Hello from Robotics On Phone\n");
       addLog("Sent test message");
     } catch (e) {
       addLog(`Send failed: ${String(e)}`);

@@ -45,7 +45,7 @@ def main():
 
     total = save_file_names(root_dir, output_file)
 
-    print(f"Found {total} file(s) → {output_file}")
+    print(f"Found {total} file(s) -> {output_file}")
 
 
 if __name__ == "__main__":

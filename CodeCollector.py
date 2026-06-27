@@ -64,7 +64,7 @@ def main():
 
     total = collect_to_file(root_dir, output_file)
 
-    print(f"Collected {total} file(s) → {output_file}")
+    print(f"Collected {total} file(s) -> {output_file}")
 
 
 if __name__ == "__main__":

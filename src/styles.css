@@ -7,7 +7,7 @@
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
-  --primary: #4f46e5;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
   --secondary: #e2e8f0;
   --secondary-foreground: #1e293b;
@@ -15,8 +15,48 @@
   --muted-foreground: #64748b;
   --destructive: #ef4444;
   --border: #e2e8f0;
-  --shadow-pop: 0 6px 0 rgba(15, 23, 42, 0.15),
-    0 10px 30px -10px rgba(79, 70, 229, 0.35);
+  --shadow-pop: 0 6px 0 rgba(15, 23, 42, 0.12),
+    0 10px 30px -10px rgba(99, 102, 241, 0.35);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --radius: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --card: #1e293b;
+    --card-foreground: #f1f5f9;
+    --primary: #818cf8;
+    --primary-foreground: #0f172a;
+    --secondary: #334155;
+    --secondary-foreground: #e2e8f0;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --destructive: #f87171;
+    --border: #334155;
+    --shadow-pop: 0 6px 0 rgba(0, 0, 0, 0.3),
+      0 10px 30px -10px rgba(129, 140, 248, 0.25);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --primary: #818cf8;
+  --primary-foreground: #0f172a;
+  --secondary: #334155;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --destructive: #f87171;
+  --border: #334155;
+  --shadow-pop: 0 6px 0 rgba(0, 0, 0, 0.3),
+    0 10px 30px -10px rgba(129, 140, 248, 0.25);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -40,6 +80,13 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .bg-background {
@@ -94,7 +141,6 @@ body {
   box-shadow: var(--shadow-pop);
 }
 
-
 .blocklyFlyoutScrollbar,
 .blocklyFlyoutScrollbar .blocklyScrollbarHandle,
 .blocklyFlyoutScrollbar .blocklyScrollbarBackground {
@@ -109,6 +155,7 @@ body {
 .blocklyFlyout .blocklyScrollbarBackground {
   display: none !important;
 }
+
 .blocklyToolboxDiv.rb-toolbox-collapsed {
   width: 28px !important;
   overflow: hidden !important;

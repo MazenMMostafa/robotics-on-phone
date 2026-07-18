@@ -44,6 +44,22 @@ export default defineConfig({
         "src/core/services/upload/UploadEngineRegistry.ts",
         "src/core/services/upload/UploadManager.ts",
         "src/core/services/upload/UploadEvents.ts",
+        // Phase 9B - AVR Upload Engine
+        "src/core/services/upload/avr/AvrUploadEngine.ts",
+        "src/core/services/upload/avr/AvrBoardProfile.ts",
+        "src/core/services/upload/avr/Stk500V1Protocol.ts",
+        "src/core/services/upload/avr/Stk500V2Protocol.ts",
+        // Phase 9C - Toolchain & Backend Abstraction
+        "src/core/services/upload/UploaderBackendRegistry.ts",
+        "src/core/services/upload/ToolchainManager.ts",
+        "src/core/services/upload/backends/AvrdudeBackend.ts",
+        "src/core/services/upload/backends/MockBackend.ts",
+        // Phase 10 - ESP32 Upload Engine
+        "src/core/services/upload/esp32/Esp32UploadEngine.ts",
+        "src/core/services/upload/esp32/EsptoolProtocol.ts",
+        "src/core/services/upload/esp32/EspResetStrategy.ts",
+        "src/core/services/upload/esp32/EspBootMode.ts",
+        "src/core/services/upload/backends/EsptoolBackend.ts",
       ],
       exclude: [
         "src/**/*.test.ts",
@@ -84,6 +100,22 @@ export default defineConfig({
         "src/core/services/upload/UploadEngineRegistry.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
         "src/core/services/upload/UploadManager.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
         "src/core/services/upload/UploadEvents.ts": { statements: 100, branches: 100, functions: 100, lines: 100 },
+        // Phase 9B - AVR Upload Engine
+        "src/core/services/upload/avr/AvrUploadEngine.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        "src/core/services/upload/avr/AvrBoardProfile.ts": { statements: 100, branches: 100, functions: 100, lines: 100 },
+        "src/core/services/upload/avr/Stk500V1Protocol.ts": { statements: 95, branches: 85, functions: 100, lines: 95 },
+        "src/core/services/upload/avr/Stk500V2Protocol.ts": { statements: 90, branches: 80, functions: 100, lines: 90 },
+        // Phase 9C - Toolchain & Backend Abstraction
+        "src/core/services/upload/UploaderBackendRegistry.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
+        "src/core/services/upload/ToolchainManager.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
+        "src/core/services/upload/backends/AvrdudeBackend.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        "src/core/services/upload/backends/MockBackend.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
+        // Phase 10 - ESP32 Upload Engine
+        "src/core/services/upload/esp32/Esp32UploadEngine.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        "src/core/services/upload/esp32/EsptoolProtocol.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        "src/core/services/upload/esp32/EspResetStrategy.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        "src/core/services/upload/esp32/EspBootMode.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        "src/core/services/upload/backends/EsptoolBackend.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
       },
       reporter: ["text", "html", "lcov"],
     },

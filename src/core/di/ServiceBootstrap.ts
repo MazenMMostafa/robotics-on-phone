@@ -37,6 +37,17 @@ import { capacitorUsbAdapter } from "../../platform/capacitor/CapacitorUsbAdapte
 // Phase 9A services
 import { UploadEngineRegistry, UploadManager } from "../services/upload";
 
+// Phase 9B services
+import { AvrUploadEngine } from "../services/upload/avr";
+
+// Phase 9C services
+import { UploaderBackendRegistry, ToolchainManager } from "../services/upload";
+import { AvrdudeBackend } from "../services/upload/backends";
+
+// Phase 10 services
+import { Esp32UploadEngine } from "../services/upload/esp32";
+import { EsptoolBackend } from "../services/upload/backends";
+
 export function bootstrapContainer(): void {
   // Platform adapters
   container.registerInstance("storage", capacitorStorageAdapter);
@@ -98,6 +109,30 @@ export function bootstrapContainer(): void {
   const uploadManager = new UploadManager(uploadEngineRegistry, logger);
   container.registerInstance("uploadEngineRegistry", uploadEngineRegistry);
   container.registerInstance("uploadManager", uploadManager);
+
+  // Phase 9C - Upload Backend Registry
+  const uploaderBackendRegistry = new UploaderBackendRegistry();
+  container.registerInstance("uploaderBackendRegistry", uploaderBackendRegistry);
+
+  // Phase 9C - Toolchain Manager
+  const toolchainManager = new ToolchainManager();
+  container.registerInstance("toolchainManager", toolchainManager);
+
+  // Phase 9C - AVR Dude Backend
+  const avrdudeBackend = new AvrdudeBackend(hardwareManager, logger);
+  uploaderBackendRegistry.register(avrdudeBackend);
+
+  // Phase 9B - AVR Upload Engine (refactored to use backend registry)
+  const avrUploadEngine = new AvrUploadEngine(uploaderBackendRegistry, logger);
+  uploadEngineRegistry.register(avrUploadEngine);
+
+  // Phase 10 - ESP Tool Backend
+  const esptoolBackend = new EsptoolBackend(hardwareManager, logger);
+  uploaderBackendRegistry.register(esptoolBackend);
+
+  // Phase 10 - ESP32 Upload Engine
+  const esp32UploadEngine = new Esp32UploadEngine(uploaderBackendRegistry, logger);
+  uploadEngineRegistry.register(esp32UploadEngine);
 
   // Core registries (extension system)
   container.registerInstance("eventBus", EventBus);

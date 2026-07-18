@@ -1,5 +1,5 @@
 import { execSync, execFileSync } from "child_process";
-import { existsSync, statSync } from "fs";
+import { existsSync, statSync, readdirSync } from "fs";
 import { join } from "path";
 import type {
   ArduinoCliCompileOptions,
@@ -48,6 +48,77 @@ export class ArduinoCliAdapter {
     if (this.cliPath) return this.cliPath;
     const info = this.detectTool();
     return info ? info.path : null;
+  }
+
+  validateInstallation(requiredCores: string[] = ["arduino:avr"]): { valid: boolean; missingCores: string[]; details: string } {
+    const info = this.detectTool();
+    if (!info) {
+      return { valid: false, missingCores: requiredCores, details: "arduino-cli executable not found" };
+    }
+    const installed = this.discoverCores();
+    const missingCores = requiredCores.filter((core) => !installed.includes(core));
+    if (missingCores.length > 0) {
+      return {
+        valid: false,
+        missingCores,
+        details: `Missing required cores: ${missingCores.join(", ")}`,
+      };
+    }
+    return { valid: true, missingCores: [], details: `arduino-cli ${info.version} ready` };
+  }
+
+  discoverCores(): string[] {
+    const cliPath = this.getPath();
+    if (!cliPath) return [];
+    try {
+      const stdout = execSync(`${cliPath} core list 2>&1`, {
+        encoding: "utf-8",
+        timeout: 30_000,
+      });
+      return this.parseCoreList(stdout);
+    } catch {
+      return [];
+    }
+  }
+
+  discoverLibraries(): string[] {
+    const cliPath = this.getPath();
+    if (!cliPath) return [];
+    try {
+      const stdout = execSync(`${cliPath} lib list 2>&1`, {
+        encoding: "utf-8",
+        timeout: 30_000,
+      });
+      return this.parseLibraryList(stdout);
+    } catch {
+      return [];
+    }
+  }
+
+  private parseCoreList(output: string): string[] {
+    const cores: string[] = [];
+    const lines = output.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.startsWith("ID") && /Installed/.test(trimmed)) continue;
+      const id = trimmed.split(/\s+/)[0];
+      if (id && id.includes(":")) cores.push(id);
+    }
+    return cores;
+  }
+
+  private parseLibraryList(output: string): string[] {
+    const libraries: string[] = [];
+    const lines = output.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.startsWith("Name") && /Installed/.test(trimmed)) continue;
+      const name = trimmed.split(/\s+/)[0];
+      if (name && name !== '"') libraries.push(name.replace(/^"|"$/g, ""));
+    }
+    return libraries;
   }
 
   compile(options: ArduinoCliCompileOptions): ArduinoCliCompileResult {
@@ -134,11 +205,15 @@ export class ArduinoCliAdapter {
     const isWin = process.platform === "win32";
     const exe = isWin ? "arduino-cli.exe" : "arduino-cli";
     const paths = [exe];
+    if (process.env.ARDUINO_CLI_PATH) {
+      paths.push(process.env.ARDUINO_CLI_PATH);
+    }
     if (isWin) {
       paths.push(
         join(process.env.LOCALAPPDATA ?? "", "Arduino15", exe),
         join(process.env.ProgramFiles ?? "", "Arduino", exe),
         join(process.env["ProgramFiles(x86)"] ?? "", "Arduino", exe),
+        "C:\\arduino-cli\\arduino-cli.exe",
       );
     } else {
       paths.push(
@@ -157,6 +232,9 @@ export class ArduinoCliAdapter {
 
   private buildCompileArgs(options: ArduinoCliCompileOptions): string[] {
     const args: string[] = ["compile", "--fqbn", options.fqbn];
+    if (options.buildPath) {
+      args.push("--build-path", options.buildPath);
+    }
     if (options.verbose) {
       args.push("--verbose");
     }
@@ -174,34 +252,56 @@ export class ArduinoCliAdapter {
 
   private findBuildOutput(
     buildPath: string,
-    fqbn: string,
+    _fqbn: string,
   ): { hexPath?: string; elfPath?: string; mapPath?: string; size: number } {
-    const fqbnPath = fqbn.replace(/:/g, ".");
-    const candidateDirs = [
-      join(buildPath, fqbnPath),
-      buildPath,
-    ];
-    for (const dir of candidateDirs) {
-      if (!existsSync(dir)) continue;
-      const hexPath = join(dir, "sketch.ino.hex");
-      const elfPath = join(dir, "sketch.ino.elf");
-      const mapPath = join(dir, "sketch.ino.map");
-      const result: { hexPath?: string; elfPath?: string; mapPath?: string; size: number } = {
-        size: 0,
-      };
-      if (existsSync(hexPath)) {
-        result.hexPath = hexPath;
-        result.size = statSync(hexPath).size;
-      } else if (existsSync(elfPath)) {
-        result.elfPath = elfPath;
-        result.size = statSync(elfPath).size;
-      }
-      if (existsSync(mapPath)) {
-        result.mapPath = mapPath;
-      }
-      return result;
+    const result: { hexPath?: string; elfPath?: string; mapPath?: string; size: number } = {
+      size: 0,
+    };
+    if (!buildPath || !existsSync(buildPath)) return result;
+
+    const hexPath = this.findFirst(buildPath, ".ino.hex");
+    const elfPath = this.findFirst(buildPath, ".ino.elf");
+    const mapPath = this.findFirst(buildPath, ".ino.map");
+
+    if (hexPath) {
+      result.hexPath = hexPath;
+      result.size = statSync(hexPath).size;
+    } else if (elfPath) {
+      result.elfPath = elfPath;
+      result.size = statSync(elfPath).size;
     }
-    return { size: 0 };
+    if (elfPath && !result.elfPath) result.elfPath = elfPath;
+    if (mapPath) result.mapPath = mapPath;
+    return result;
+  }
+
+  private findFirst(dir: string, suffix: string): string | undefined {
+    let found: string | undefined;
+    const walk = (current: string): void => {
+      if (found) return;
+      let entries: string[];
+      try {
+        entries = readdirSync(current);
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (found) return;
+        const full = join(current, entry);
+        try {
+          const st = statSync(full);
+          if (st.isDirectory()) {
+            walk(full);
+          } else if (entry.endsWith(suffix)) {
+            found = full;
+          }
+        } catch {
+          // ignore unreadable entries
+        }
+      }
+    };
+    walk(dir);
+    return found;
   }
 
   private isErrorLine(line: string): boolean {

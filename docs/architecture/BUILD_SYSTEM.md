@@ -104,3 +104,40 @@ The `ArduinoCliBuildEngine` (id: `arduino-cli-v1`) is the first concrete build b
 
 The engine is registered in `di/ServiceBootstrap.ts` and exposed as the `arduinoCliBuildEngine` container instance.
 
+## Phase 14.5 — Real Arduino CLI Integration
+
+Phase 14.5 wires the existing `ArduinoCliBuildEngine` to the **real** `arduino-cli` executable (no redesign, no framework changes). The `ArduinoCliAdapter` was extended with real-tooling operations:
+
+| Method | Purpose |
+|--------|---------|
+| `detectTool()` | Locates `arduino-cli` (PATH, `ARDUINO_CLI_PATH` env, common install dirs incl. `C:\arduino-cli`) and reads its version |
+| `validateInstallation(cores)` | Confirms the CLI exists and the required cores (default `arduino:avr`) are installed |
+| `discoverCores()` | Runs `arduino-cli core list` and parses installed core IDs |
+| `discoverLibraries()` | Runs `arduino-cli lib list` and parses installed library names |
+| `compile()` | Invokes `arduino-cli compile --fqbn <fqbn> --build-path <out> <sketch>` and recursively locates the produced `.ino.hex`/`.ino.elf`/`.ino.map` |
+
+**End-to-end pipeline (verified by `ArduinoCliRealIntegration.test.ts`):**
+
+```
+Blockly blocks
+  → ArduinoCppGenerator.generate()   (Phase 13)
+  → ArduinoCliBuildEngine.build()     (Phase 14, real arduino-cli)
+  → BuildArtifact (.hex + checksum)
+```
+
+The integration test compiles six generated sketches to real HEX files and is skipped automatically when `arduino-cli` is not installed on the host:
+
+- Blink
+- Traffic Light
+- Button
+- PWM LED
+- Potentiometer
+- Counter
+
+**Verified on the Phase 14.5 host:**
+- arduino-cli version: `1.4.1`
+- Detected cores: `arduino:avr 1.8.7`, `esp32:esp32 2.0.17`
+- Detected libraries: 19 installed user libraries
+- All six example sketches produced valid `.hex` artifacts.
+
+

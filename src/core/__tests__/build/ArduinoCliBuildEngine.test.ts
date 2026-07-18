@@ -122,7 +122,7 @@ describe("ArduinoCliBuildEngine", () => {
       await engine.build(makeOptions());
       expect(writeFileSync).toHaveBeenCalled();
       const writtenPath = vi.mocked(writeFileSync).mock.calls[0][0] as string;
-      expect(writtenPath).toContain("sketch.ino");
+      expect(writtenPath).toMatch(/\.ino$/);
       const writtenContent = vi.mocked(writeFileSync).mock.calls[0][1] as string;
       expect(writtenContent).toContain("void setup");
     });

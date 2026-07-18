@@ -1,6 +1,6 @@
 import { randomUUID, createHash } from "crypto";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "fs";
-import { join } from "path";
+import { join, basename } from "path";
 import { tmpdir } from "os";
 import type {
   BuildEngine,
@@ -28,6 +28,7 @@ export class ArduinoCliBuildEngine implements BuildEngine {
 
   private adapter: ArduinoCliAdapter;
   private activeBuildPath: string | null = null;
+  private activeBuildOutputPath: string | null = null;
 
   constructor(adapter?: ArduinoCliAdapter) {
     this.adapter = adapter ?? new ArduinoCliAdapter();
@@ -67,8 +68,10 @@ export class ArduinoCliBuildEngine implements BuildEngine {
 
     this.reportProgress(onProgress, "preparing", 10, ["Preparing build environment"]);
 
-    const sketchDir = this.createTempDir("arduino-build-");
+    const sketchDir = this.createTempDir("arduino-sketch-");
+    const buildDir = this.createTempDir("arduino-build-");
     this.activeBuildPath = sketchDir;
+    this.activeBuildOutputPath = buildDir;
 
     try {
       const sourceContent = this.resolveSourceContent(options);
@@ -76,14 +79,14 @@ export class ArduinoCliBuildEngine implements BuildEngine {
         throw new Error("No source content provided. Set sourcePath or additionalArgs.sourceContent in BuildOptions.");
       }
 
-      this.writeSketchFiles(sketchDir, sourceContent);
+      this.writeSketchFiles(sketchDir, sourceContent, fqbn);
 
       this.reportProgress(onProgress, "compiling", 30, ["Compiling sketch..."]);
 
       const compileResult = this.adapter.compile({
         fqbn,
         sketchPath: sketchDir,
-        buildPath: sketchDir,
+        buildPath: buildDir,
         verbose: true,
       });
 
@@ -170,14 +173,17 @@ export class ArduinoCliBuildEngine implements BuildEngine {
   }
 
   async cleanup(_options: BuildOptions): Promise<void> {
-    if (this.activeBuildPath && existsSync(this.activeBuildPath)) {
-      try {
-        rmSync(this.activeBuildPath, { recursive: true, force: true });
-      } catch {
-        // ignore cleanup errors
+    for (const dir of [this.activeBuildPath, this.activeBuildOutputPath]) {
+      if (dir && existsSync(dir)) {
+        try {
+          rmSync(dir, { recursive: true, force: true });
+        } catch {
+          // ignore cleanup errors
+        }
       }
-      this.activeBuildPath = null;
     }
+    this.activeBuildPath = null;
+    this.activeBuildOutputPath = null;
   }
 
   private validateBoard(boardId: string): void {
@@ -209,8 +215,9 @@ export class ArduinoCliBuildEngine implements BuildEngine {
     return undefined;
   }
 
-  private writeSketchFiles(sketchDir: string, content: string): void {
-    const mainFile = join(sketchDir, "sketch.ino");
+  private writeSketchFiles(sketchDir: string, content: string, _fqbn: string): void {
+    const sketchName = basename(sketchDir);
+    const mainFile = join(sketchDir, `${sketchName}.ino`);
     writeFileSync(mainFile, content, "utf-8");
   }
 

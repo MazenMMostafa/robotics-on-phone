@@ -7,13 +7,14 @@ vi.mock("child_process", () => ({
 }));
 
 vi.mock("fs", () => ({
-  existsSync: vi.fn(),
-  statSync: vi.fn(),
+  existsSync: vi.fn().mockReturnValue(true),
+  statSync: vi.fn().mockReturnValue({ size: 1234, isDirectory: () => false }),
+  readdirSync: vi.fn().mockReturnValue(["sketch_output.ino.hex", "sketch_output.ino.elf"]),
   readFileSync: vi.fn(),
 }));
 
 import { execSync, execFileSync } from "child_process";
-import { existsSync, statSync } from "fs";
+import { existsSync, statSync, readdirSync } from "fs";
 
 describe("ArduinoCliAdapter", () => {
   let adapter: ArduinoCliAdapter;
@@ -22,6 +23,9 @@ describe("ArduinoCliAdapter", () => {
     adapter = new ArduinoCliAdapter();
     vi.clearAllMocks();
     vi.mocked(execSync).mockImplementation(() => "arduino-cli  Version: 1.2.3" as never);
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(statSync).mockReturnValue({ size: 1234, isDirectory: () => false } as never);
+    vi.mocked(readdirSync).mockReturnValue(["sketch_output.ino.hex", "sketch_output.ino.elf"] as never);
   });
 
   afterEach(() => {
@@ -85,8 +89,8 @@ describe("ArduinoCliAdapter", () => {
 
     it("returns success and locates build output on successful compile", () => {
       vi.mocked(execFileSync).mockReturnValue("Compile complete" as never);
-      vi.mocked(existsSync).mockImplementation((p) => String(p).includes("arduino.avr.uno") || String(p).endsWith("sketch.ino.hex"));
-      vi.mocked(statSync).mockReturnValue({ size: 1234 } as never);
+      vi.mocked(existsSync).mockImplementation((p) => String(p) === "/tmp/build" || String(p).endsWith(".ino.hex") || String(p).endsWith(".ino.elf"));
+      vi.mocked(statSync).mockReturnValue({ size: 1234, isDirectory: () => false } as never);
 
       const result = adapter.compile({
         fqbn: "arduino:avr:uno",
@@ -96,14 +100,14 @@ describe("ArduinoCliAdapter", () => {
 
       expect(result.success).toBe(true);
       expect(result.exitCode).toBe(0);
-      expect(result.hexPath).toContain("sketch.ino.hex");
+      expect(result.hexPath).toContain(".ino.hex");
       expect(result.size).toBe(1234);
     });
 
     it("parses warnings from stdout", () => {
       vi.mocked(execFileSync).mockReturnValue("something warning: deprecated API" as never);
-      vi.mocked(existsSync).mockImplementation((p) => String(p).includes("arduino.avr.uno") || String(p).endsWith("sketch.ino.hex"));
-      vi.mocked(statSync).mockReturnValue({ size: 100 } as never);
+      vi.mocked(existsSync).mockImplementation((p) => String(p) === "/tmp/build" || String(p).endsWith(".ino.hex") || String(p).endsWith(".ino.elf"));
+      vi.mocked(statSync).mockReturnValue({ size: 100, isDirectory: () => false } as never);
 
       const result = adapter.compile({
         fqbn: "arduino:avr:uno",

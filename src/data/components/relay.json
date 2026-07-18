@@ -1,0 +1,24 @@
+{
+  "id": "relay",
+  "displayName": "Relay Module",
+  "description": "Electromechanical relay for switching high-voltage devices",
+  "category": "actuator",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [
+    { "key": "PIN", "label": "Control pin", "type": "digital" }
+  ],
+  "optionalPins": [],
+  "libraries": [],
+  "generatorId": "relay",
+  "blockId": "rb_relay_write",
+  "icon": "🔌",
+  "examples": [
+    {
+      "title": "Toggle Relay",
+      "description": "Turn relay on and off every 2 seconds",
+      "code": "digitalWrite(relayPin, HIGH); delay(2000); digitalWrite(relayPin, LOW);",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": []
+}

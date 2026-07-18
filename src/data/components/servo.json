@@ -1,0 +1,27 @@
+{
+  "id": "servo",
+  "displayName": "Servo Motor",
+  "description": "Standard servo motor controlled by PWM signal (0-180 degrees)",
+  "category": "actuator",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [
+    { "key": "PIN", "label": "Signal pin", "type": "pwm" }
+  ],
+  "optionalPins": [],
+  "libraries": ["Servo"],
+  "generatorId": "servo",
+  "blockId": "rb_servo_write",
+  "icon": "⚙️",
+  "examples": [
+    {
+      "title": "Sweep",
+      "description": "Sweep servo from 0 to 180 degrees",
+      "code": "servo.write(angle);",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "requiresPWM", "message": "Servo requires a PWM-capable pin" },
+    { "rule": "requiresLibrary", "message": "Servo library is required" }
+  ]
+}

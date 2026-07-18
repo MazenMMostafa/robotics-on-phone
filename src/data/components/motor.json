@@ -1,0 +1,28 @@
+{
+  "id": "motor",
+  "displayName": "DC Motor (L298N)",
+  "description": "DC motor controlled via L298N H-bridge driver",
+  "category": "actuator",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "pico"],
+  "requiredPins": [
+    { "key": "DIR1", "label": "Direction pin 1", "type": "digital" },
+    { "key": "DIR2", "label": "Direction pin 2", "type": "digital" },
+    { "key": "PWM", "label": "PWM speed pin", "type": "pwm" }
+  ],
+  "optionalPins": [],
+  "libraries": [],
+  "generatorId": "motor",
+  "blockId": "rb_connect_motor",
+  "icon": "🔄",
+  "examples": [
+    {
+      "title": "Run Motor Forward",
+      "description": "Run DC motor forward at 75% speed",
+      "code": "digitalWrite(dir1, HIGH); digitalWrite(dir2, LOW); analogWrite(pwm, 191);",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "requiresPWM", "message": "Motor speed control requires a PWM pin" }
+  ]
+}

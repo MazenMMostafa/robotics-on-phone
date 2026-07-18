@@ -1,0 +1,26 @@
+{
+  "id": "buzzer",
+  "displayName": "Piezo Buzzer",
+  "description": "Piezoelectric buzzer for generating tones",
+  "category": "output",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [
+    { "key": "PIN", "label": "Signal pin", "type": "pwm" }
+  ],
+  "optionalPins": [],
+  "libraries": [],
+  "generatorId": "buzzer",
+  "blockId": "rb_play_tone",
+  "icon": "🔔",
+  "examples": [
+    {
+      "title": "Play Melody",
+      "description": "Play a simple melody using tone()",
+      "code": "tone(buzzerPin, 262, 500); delay(500); noTone(buzzerPin);",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "requiresPWM", "message": "Buzzer requires a PWM-capable pin for tone generation" }
+  ]
+}

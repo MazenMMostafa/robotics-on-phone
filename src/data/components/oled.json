@@ -1,0 +1,25 @@
+{
+  "id": "oled",
+  "displayName": "OLED Display (I2C)",
+  "description": "Monochrome OLED display with I2C interface (128x64 or 128x32)",
+  "category": "display",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [],
+  "optionalPins": [],
+  "libraries": ["Adafruit_SSD1306", "Adafruit_GFX", "Wire"],
+  "generatorId": "oled",
+  "blockId": "rb_oled_init",
+  "icon": "🖥️",
+  "examples": [
+    {
+      "title": "Hello OLED",
+      "description": "Display text on OLED screen",
+      "code": "display.print(\"Hello World\");",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "requiresI2C", "message": "OLED requires I2C (SDA/SCL pins)" },
+    { "rule": "requiresLibrary", "message": "Adafruit SSD1306 and GFX libraries are required" }
+  ]
+}

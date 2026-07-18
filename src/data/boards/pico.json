@@ -1,0 +1,65 @@
+{
+  "id": "pico",
+  "displayName": "Raspberry Pi Pico",
+  "manufacturer": "Raspberry Pi",
+  "architecture": "arm",
+  "processor": "RP2040",
+  "uploadProtocol": "uf2",
+  "compileFQBN": "rp2040:rp2040:rpipico",
+  "defaultBaudRate": 115200,
+  "supportedBaudRates": [9600, 57600, 115200],
+  "digitalPins": [
+    { "pin": 0, "pwm": true, "interrupt": true },
+    { "pin": 1, "pwm": true, "interrupt": true },
+    { "pin": 2, "pwm": true, "interrupt": true },
+    { "pin": 3, "pwm": true, "interrupt": true },
+    { "pin": 4, "pwm": true, "interrupt": true },
+    { "pin": 5, "pwm": true, "interrupt": true },
+    { "pin": 6, "pwm": true, "interrupt": true },
+    { "pin": 7, "pwm": true, "interrupt": true },
+    { "pin": 8, "pwm": true, "interrupt": true },
+    { "pin": 9, "pwm": true, "interrupt": true },
+    { "pin": 10, "pwm": true, "interrupt": true },
+    { "pin": 11, "pwm": true, "interrupt": true },
+    { "pin": 12, "pwm": true, "interrupt": true },
+    { "pin": 13, "pwm": true, "interrupt": true },
+    { "pin": 14, "pwm": true, "interrupt": true },
+    { "pin": 15, "pwm": true, "interrupt": true },
+    { "pin": 16, "pwm": true, "interrupt": true },
+    { "pin": 17, "pwm": true, "interrupt": true },
+    { "pin": 18, "pwm": true, "interrupt": true },
+    { "pin": 19, "pwm": true, "interrupt": true },
+    { "pin": 20, "pwm": true, "interrupt": true },
+    { "pin": 21, "pwm": true, "interrupt": true },
+    { "pin": 22, "name": "LED", "pwm": true, "interrupt": true, "builtinLed": true },
+    { "pin": 26, "pwm": true, "interrupt": true },
+    { "pin": 27, "pwm": true, "interrupt": true },
+    { "pin": 28, "pwm": true, "interrupt": true }
+  ],
+  "analogPins": [
+    { "pin": 26 }, { "pin": 27 }, { "pin": 28 }
+  ],
+  "pwmPins": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 26, 27, 28],
+  "interruptPins": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 26, 27, 28],
+  "uart": [
+    { "num": 0, "rx": 1, "tx": 0 },
+    { "num": 1, "rx": 5, "tx": 4 }
+  ],
+  "i2c": [
+    { "num": 0, "sda": 4, "scl": 5 },
+    { "num": 1, "sda": 14, "scl": 15 }
+  ],
+  "spi": [
+    { "num": 0, "mosi": 19, "miso": 16, "sck": 18, "ss": 17 },
+    { "num": 1, "mosi": 11, "miso": 8, "sck": 10, "ss": 9 }
+  ],
+  "voltage": "3.3V",
+  "clockSpeed": 133000000,
+  "flashSize": 2097152,
+  "ramSize": 264192,
+  "libraries": ["Servo", "LiquidCrystal_I2C", "DHT", "Wire", "SPI"],
+  "capabilities": ["digital", "analog", "pwm", "i2c", "spi", "uart", "interrupt", "pio"],
+  "supportedComponents": ["servo", "lcd", "relay", "motor", "ultrasonic", "dht", "button", "led", "buzzer"],
+  "icon": "🟡",
+  "image": ""
+}

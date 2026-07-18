@@ -1,0 +1,33 @@
+{
+  "id": "lcd",
+  "displayName": "LCD 16x2 Display",
+  "description": "16x2 character LCD display with parallel or I2C interface",
+  "category": "display",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [
+    { "key": "RS", "label": "Register select pin", "type": "digital" },
+    { "key": "EN", "label": "Enable pin", "type": "digital" },
+    { "key": "D4", "label": "Data pin 4", "type": "digital" },
+    { "key": "D5", "label": "Data pin 5", "type": "digital" },
+    { "key": "D6", "label": "Data pin 6", "type": "digital" },
+    { "key": "D7", "label": "Data pin 7", "type": "digital" }
+  ],
+  "optionalPins": [
+    { "key": "ADDR", "label": "I2C address (for I2C variant)", "type": "text", "default": "0x27" }
+  ],
+  "libraries": ["LiquidCrystal", "LiquidCrystal_I2C", "Wire"],
+  "generatorId": "lcd",
+  "blockId": "rb_lcd_init_parallel",
+  "icon": "🖥️",
+  "examples": [
+    {
+      "title": "Hello LCD",
+      "description": "Display Hello World on LCD",
+      "code": "lcd.print(\"Hello World\");",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "pinCount", "value": 6, "message": "LCD requires 6 data pins (RS, EN, D4-D7)" }
+  ]
+}

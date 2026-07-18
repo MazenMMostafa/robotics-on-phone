@@ -1,0 +1,27 @@
+{
+  "id": "ultrasonic",
+  "displayName": "HC-SR04 Ultrasonic Sensor",
+  "description": "Ultrasonic distance sensor measuring 2cm to 400cm",
+  "category": "sensor",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [
+    { "key": "TRIG", "label": "Trigger pin", "type": "digital" },
+    { "key": "ECHO", "label": "Echo pin", "type": "digital" }
+  ],
+  "optionalPins": [],
+  "libraries": [],
+  "generatorId": "ultrasonic",
+  "blockId": "rb_ultrasonic_distance",
+  "icon": "📡",
+  "examples": [
+    {
+      "title": "Distance Measurement",
+      "description": "Read and print distance from HC-SR04",
+      "code": "long cm = readUltrasonicCM(trigPin, echoPin); Serial.println(cm);",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "pinSeparation", "value": 2, "message": "TRIG and ECHO should be on different pins" }
+  ]
+}

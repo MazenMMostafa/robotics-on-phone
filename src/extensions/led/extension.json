@@ -1,0 +1,14 @@
+{
+  "id": "led",
+  "name": "LED Support",
+  "version": "1.0.0",
+  "author": "NewBegin Makes",
+  "description": "Basic LED output support — blink, fade, and control LEDs",
+  "dependencies": {
+    "extensions": [],
+    "libraries": [],
+    "boards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"]
+  },
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "icon": "led"
+}

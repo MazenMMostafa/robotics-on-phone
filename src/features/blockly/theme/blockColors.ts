@@ -1,0 +1,9 @@
+export const CONTROL = "#FFA51F";
+export const OPERATORS = "#49B44E";
+export const VARIABLES = "#FF8C1A";
+export const MY_BLOCKS = "#FF6680";
+export const ARDUINO = "#14BFA3";
+export const ACTUATORS = "#55B82E";
+export const SENSORS = "#54B8DE";
+export const DISPLAY = "#FF4D5A";
+export const WIFI_BT = "#3498DB";

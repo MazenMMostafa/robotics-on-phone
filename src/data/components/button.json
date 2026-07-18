@@ -1,0 +1,26 @@
+{
+  "id": "button",
+  "displayName": "Push Button",
+  "description": "Momentary push button with pull-up/pull-down resistor",
+  "category": "input",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [
+    { "key": "PIN", "label": "Signal pin", "type": "digital" }
+  ],
+  "optionalPins": [],
+  "libraries": [],
+  "generatorId": "button",
+  "blockId": "rb_digital_sensor",
+  "icon": "🔘",
+  "examples": [
+    {
+      "title": "Read Button State",
+      "description": "Read button press and print state",
+      "code": "int state = digitalRead(buttonPin);",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "requiresPullUp", "message": "Button should use INPUT_PULLUP or external pull-up resistor" }
+  ]
+}

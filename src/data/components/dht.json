@@ -1,0 +1,26 @@
+{
+  "id": "dht",
+  "displayName": "DHT11/DHT22 Temperature & Humidity",
+  "description": "Digital temperature and humidity sensor",
+  "category": "sensor",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [
+    { "key": "PIN", "label": "Data pin", "type": "digital" }
+  ],
+  "optionalPins": [],
+  "libraries": ["DHT"],
+  "generatorId": "dht",
+  "blockId": "rb_dht_sensor",
+  "icon": "🌡️",
+  "examples": [
+    {
+      "title": "Temperature Monitor",
+      "description": "Read temperature and humidity",
+      "code": "float t = dht.readTemperature(); float h = dht.readHumidity();",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "requiresLibrary", "message": "DHT sensor library is required" }
+  ]
+}

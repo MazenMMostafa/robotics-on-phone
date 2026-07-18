@@ -1,0 +1,26 @@
+{
+  "id": "led",
+  "displayName": "LED (Light Emitting Diode)",
+  "description": "Standard 5mm LED with current-limiting resistor",
+  "category": "output",
+  "supportedBoards": ["uno", "nano", "mega", "leonardo", "esp32", "esp8266", "pico"],
+  "requiredPins": [
+    { "key": "PIN", "label": "Anode pin", "type": "digital" }
+  ],
+  "optionalPins": [],
+  "libraries": [],
+  "generatorId": "led",
+  "blockId": "rb_set_digital_pin",
+  "icon": "💡",
+  "examples": [
+    {
+      "title": "Blink LED",
+      "description": "Blink an LED every 1 second",
+      "code": "digitalWrite(ledPin, HIGH); delay(1000); digitalWrite(ledPin, LOW); delay(1000);",
+      "difficulty": "beginner"
+    }
+  ],
+  "validationRules": [
+    { "rule": "requiresResistor", "message": "LED requires a current-limiting resistor (220-330 ohm)" }
+  ]
+}

@@ -69,6 +69,13 @@ export default defineConfig({
         "src/core/services/codegen/CodeGeneratorRegistry.ts",
         "src/core/services/codegen/CodeGenerationManager.ts",
         "src/core/services/codegen/MockCodeGenerator.ts",
+        // Phase 13 - Arduino C++ Generator
+        "src/core/services/codegen/arduino/ArduinoCppGenerator.ts",
+        "src/core/services/codegen/arduino/ArduinoValidator.ts",
+        "src/core/services/codegen/arduino/ArduinoBlockRegistry.ts",
+        "src/core/services/codegen/arduino/BlockGenerators.ts",
+        "src/core/services/codegen/arduino/GenerationContext.ts",
+        "src/core/services/codegen/arduino/types.ts",
       ],
       exclude: [
         "src/**/*.test.ts",
@@ -134,6 +141,12 @@ export default defineConfig({
         "src/core/services/codegen/CodeGeneratorRegistry.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
         "src/core/services/codegen/CodeGenerationManager.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
         "src/core/services/codegen/MockCodeGenerator.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
+        // Phase 13 - Arduino C++ Generator
+        "src/core/services/codegen/arduino/ArduinoCppGenerator.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
+        "src/core/services/codegen/arduino/ArduinoValidator.ts": { statements: 95, branches: 85, functions: 95, lines: 95 },
+        "src/core/services/codegen/arduino/ArduinoBlockRegistry.ts": { statements: 100, branches: 100, functions: 100, lines: 100 },
+        "src/core/services/codegen/arduino/BlockGenerators.ts": { statements: 95, branches: 85, functions: 95, lines: 95 },
+        "src/core/services/codegen/arduino/GenerationContext.ts": { statements: 95, branches: 85, functions: 95, lines: 95 },
       },
       reporter: ["text", "html", "lcov"],
     },

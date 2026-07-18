@@ -137,6 +137,9 @@ export default defineConfig({
         "src/core/services/build/BuildManager.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
         "src/core/services/build/BuildCache.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
         "src/core/services/build/MockBuildEngine.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
+        // Phase 14 - Arduino CLI Build Engine
+        "src/core/services/build/arduino/ArduinoCliAdapter.ts": { statements: 85, branches: 75, functions: 85, lines: 85 },
+        "src/core/services/build/arduino/ArduinoCliBuildEngine.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
         // Phase 12 - Code Generation
         "src/core/services/codegen/CodeGeneratorRegistry.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
         "src/core/services/codegen/CodeGenerationManager.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },

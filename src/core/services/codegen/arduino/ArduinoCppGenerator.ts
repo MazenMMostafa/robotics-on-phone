@@ -129,7 +129,7 @@ export class ArduinoCppGenerator implements CodeGenerator {
 
   private parseBlocks(options: GenerationOptions): ArduinoBlock[] {
     if (options.blocks && options.blocks.length > 0) {
-      return options.blocks as ArduinoBlock[];
+      return options.blocks as unknown as ArduinoBlock[];
     }
     return [];
   }

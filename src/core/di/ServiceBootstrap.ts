@@ -51,6 +51,9 @@ import { EsptoolBackend } from "../services/upload/backends";
 // Phase 11 services
 import { BuildEngineRegistry, BuildManager } from "../services/build";
 
+// Phase 14 services
+import { ArduinoCliBuildEngine } from "../services/build/arduino";
+
 // Phase 12 services
 import { CodeGeneratorRegistry, CodeGenerationManager } from "../services/codegen";
 
@@ -148,6 +151,11 @@ export function bootstrapContainer(): void {
   const buildManager = new BuildManager(buildEngineRegistry, logger);
   container.registerInstance("buildEngineRegistry", buildEngineRegistry);
   container.registerInstance("buildManager", buildManager);
+
+  // Phase 14 - Arduino CLI Build Engine (priority 100, selected first for arduino framework)
+  const arduinoCliBuildEngine = new ArduinoCliBuildEngine();
+  buildEngineRegistry.register(arduinoCliBuildEngine);
+  container.registerInstance("arduinoCliBuildEngine", arduinoCliBuildEngine);
 
   // Phase 12 - Code Generation Framework
   const codeGeneratorRegistry = new CodeGeneratorRegistry();

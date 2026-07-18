@@ -71,3 +71,51 @@ export class ArtifactNotFound extends BuildError {
     this.name = "ArtifactNotFound";
   }
 }
+
+export class InvalidBoard extends BuildError {
+  constructor(boardId: string) {
+    super(
+      "INVALID_BOARD",
+      `Board "${boardId}" is not supported for Arduino CLI build`,
+      false,
+      { boardId },
+    );
+    this.name = "InvalidBoard";
+  }
+}
+
+export class SyntaxError extends BuildError {
+  constructor(framework: string, stderr: string) {
+    super(
+      "SYNTAX_ERROR",
+      `Syntax error in source code for framework "${framework}"`,
+      true,
+      { framework, stderr },
+    );
+    this.name = "SyntaxError";
+  }
+}
+
+export class LibraryMissing extends BuildError {
+  constructor(library: string, framework: string) {
+    super(
+      "LIBRARY_MISSING",
+      `Required library "${library}" is missing for framework "${framework}"`,
+      true,
+      { library, framework },
+    );
+    this.name = "LibraryMissing";
+  }
+}
+
+export class BuildTimeout extends BuildError {
+  constructor(framework: string, timeoutMs: number) {
+    super(
+      "BUILD_TIMEOUT",
+      `Build timed out after ${timeoutMs}ms for framework "${framework}"`,
+      true,
+      { framework, timeoutMs },
+    );
+    this.name = "BuildTimeout";
+  }
+}

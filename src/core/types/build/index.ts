@@ -8,5 +8,9 @@ export {
   InvalidProject,
   UnsupportedFramework,
   ArtifactNotFound,
+  InvalidBoard,
+  SyntaxError,
+  LibraryMissing,
+  BuildTimeout,
 } from "./error";
 export { BUILD_EVENTS } from "./events";

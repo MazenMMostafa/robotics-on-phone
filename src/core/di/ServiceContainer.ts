@@ -55,7 +55,7 @@ export class ServiceContainer {
   }
 
   has(name: string): boolean {
-    return this.definitions.has(name);
+    return this.definitions.has(name) || this.instances.has(name);
   }
 
   registerInstance<T>(name: string, instance: T): void {
@@ -68,7 +68,10 @@ export class ServiceContainer {
   }
 
   getRegisteredNames(): string[] {
-    return Array.from(this.definitions.keys());
+    const names = new Set<string>();
+    for (const name of this.definitions.keys()) names.add(name);
+    for (const name of this.instances.keys()) names.add(name);
+    return Array.from(names);
   }
 }
 

@@ -34,6 +34,9 @@ import { HardwareManager } from "../services/hardware/HardwareManager";
 import { CompatibilityService } from "../services/compatibility/CompatibilityService";
 import { capacitorUsbAdapter } from "../../platform/capacitor/CapacitorUsbAdapter";
 
+// Phase 9A services
+import { UploadEngineRegistry, UploadManager } from "../services/upload";
+
 export function bootstrapContainer(): void {
   // Platform adapters
   container.registerInstance("storage", capacitorStorageAdapter);
@@ -89,6 +92,12 @@ export function bootstrapContainer(): void {
   // Phase 8 - Compatibility Service
   const compatibilityService = new CompatibilityService();
   container.registerInstance("compatibilityService", compatibilityService);
+
+  // Phase 9A - Upload Framework
+  const uploadEngineRegistry = new UploadEngineRegistry();
+  const uploadManager = new UploadManager(uploadEngineRegistry, logger);
+  container.registerInstance("uploadEngineRegistry", uploadEngineRegistry);
+  container.registerInstance("uploadManager", uploadManager);
 
   // Core registries (extension system)
   container.registerInstance("eventBus", EventBus);

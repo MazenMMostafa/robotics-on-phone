@@ -55,4 +55,9 @@ export interface BoardConfig {
   supportedComponents: string[];
   icon: string;
   image: string;
+  preferredUploadEngine?: string;
+  supportedUploadEngines?: string[];
+  bootloader?: string;
+  resetStrategy?: "dtr" | "rts" | "dtr_rts" | "touch" | "none";
+  verificationStrategy?: "checksum" | "compare" | "none";
 }

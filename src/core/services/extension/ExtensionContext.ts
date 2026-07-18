@@ -159,6 +159,39 @@ export class ExtensionContext {
     }
   }
 
+  // ── Upload Status (Read-only) ───────────────────────────
+  getUploadStatus(): string {
+    try {
+      const um = container.get<any>("uploadManager");
+      return um.getStatus();
+    } catch {
+      return "idle";
+    }
+  }
+
+  getUploadProgress(): { stage: string; percent: number; messages: string[] } | null {
+    try {
+      const um = container.get<any>("uploadManager");
+      const progress = um.getCurrentProgress();
+      return {
+        stage: progress.stage,
+        percent: progress.percent,
+        messages: progress.messages,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  hasQueuedUploads(): boolean {
+    try {
+      const um = container.get<any>("uploadManager");
+      return um.hasQueuedUploads();
+    } catch {
+      return false;
+    }
+  }
+
   // ── Lifecycle ───────────────────────────────────────────
   dispose(): void {
     for (const sub of this.subscriptions) {

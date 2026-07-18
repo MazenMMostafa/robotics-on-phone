@@ -1,4 +1,4 @@
-# Robotics On Phone
+# NewBegin Makes
 
 Version: 1.0
 
@@ -6,7 +6,7 @@ Version: 1.0
 
 # Vision
 
-Robotics On Phone is a complete mobile-first Arduino programming environment.
+NewBegin Makes is a complete mobile-first Arduino programming environment.
 
 The goal is to make it possible to build, program, compile, upload, debug and manage Arduino projects entirely from an Android phone without requiring a laptop.
 

@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "com.roboticsonphone.app",
-  appName: "Robotics On Phone",
+  appName: "NewBegin Makes",
   webDir: "dist",
   server: {
     androidScheme: "https",

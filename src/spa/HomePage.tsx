@@ -9,7 +9,7 @@ export default function HomePage({ setPage }: Props) {
     <main className="min-h-screen bg-background text-foreground p-6">
       <section className="max-w-5xl mx-auto py-10">
         <div className="rounded-3xl bg-card p-8 border-2 border-border">
-          <p className="text-primary font-semibold mb-3">Robotics On Phone</p>
+          <p className="text-primary font-semibold mb-3">NewBegin Makes</p>
 
           <h1 className="text-4xl font-bold mb-4">
             Block Coding for Arduino and ESP32

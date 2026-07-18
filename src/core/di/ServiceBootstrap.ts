@@ -27,11 +27,19 @@ import { NotificationService } from "../services/notification/NotificationServic
 import { DialogService } from "../services/dialog/DialogService";
 import { ErrorHandler } from "../services/error/ErrorHandler";
 
+// Phase 8 services
+import { PortManager } from "../services/port/PortManager";
+import { DeviceManager } from "../services/device/DeviceManager";
+import { HardwareManager } from "../services/hardware/HardwareManager";
+import { CompatibilityService } from "../services/compatibility/CompatibilityService";
+import { capacitorUsbAdapter } from "../../platform/capacitor/CapacitorUsbAdapter";
+
 export function bootstrapContainer(): void {
   // Platform adapters
   container.registerInstance("storage", capacitorStorageAdapter);
   container.registerInstance("compiler", capacitorCompilerAdapter);
   container.registerInstance("file", capacitorFileAdapter);
+  container.registerInstance("usbAdapter", capacitorUsbAdapter);
 
   // Phase 7 - Logging
   container.registerInstance("logger", logger);
@@ -59,6 +67,28 @@ export function bootstrapContainer(): void {
   // Phase 7 - Error Handler
   const errorHandler = new ErrorHandler(logger, notificationService);
   container.registerInstance("errorHandler", errorHandler);
+
+  // Phase 8 - Port Manager
+  const portManager = new PortManager(capacitorStorageAdapter, logger);
+  container.registerInstance("portManager", portManager);
+
+  // Phase 8 - Device Manager
+  const deviceManager = new DeviceManager(capacitorStorageAdapter);
+  container.registerInstance("deviceManager", deviceManager);
+
+  // Phase 8 - Hardware Manager
+  const hardwareManager = new HardwareManager(
+    portManager,
+    deviceManager,
+    capacitorUsbAdapter,
+    capacitorStorageAdapter,
+    logger,
+  );
+  container.registerInstance("hardwareManager", hardwareManager);
+
+  // Phase 8 - Compatibility Service
+  const compatibilityService = new CompatibilityService();
+  container.registerInstance("compatibilityService", compatibilityService);
 
   // Core registries (extension system)
   container.registerInstance("eventBus", EventBus);

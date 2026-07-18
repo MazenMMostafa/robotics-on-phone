@@ -22,6 +22,7 @@ import { LibraryRegistry } from "./LibraryRegistry";
 import { ExampleRegistry } from "./ExampleRegistry";
 import { AssetRegistry } from "./AssetRegistry";
 import { CommandRegistry } from "./CommandRegistry";
+import { container } from "../../di/ServiceContainer";
 
 export class ExtensionContext {
   readonly id: string;
@@ -126,6 +127,36 @@ export class ExtensionContext {
 
   emit(event: string, ...args: any[]): void {
     EventBus.emit(event, ...args);
+  }
+
+  // ── Hardware Queries ────────────────────────────────────
+  getCurrentBoardId(): string | null {
+    try {
+      const hm = container.get<any>("hardwareManager");
+      return hm.getSelectedBoardId();
+    } catch {
+      return null;
+    }
+  }
+
+  getBoardCapabilities(): string[] {
+    try {
+      const hm = container.get<any>("hardwareManager");
+      const boardId = hm.getSelectedBoardId();
+      if (!boardId) return [];
+      return hm.getBoardCapabilities(boardId);
+    } catch {
+      return [];
+    }
+  }
+
+  isDeviceConnected(): boolean {
+    try {
+      const hm = container.get<any>("hardwareManager");
+      return hm.isConnected();
+    } catch {
+      return false;
+    }
   }
 
   // ── Lifecycle ───────────────────────────────────────────

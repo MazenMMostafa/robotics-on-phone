@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { USBAdapter, UsbDeviceInfo, UsbConnectionOptions, ReadResult, WriteResult } from "../../core/platform/types";
 
 export class MockUsbAdapter implements USBAdapter {

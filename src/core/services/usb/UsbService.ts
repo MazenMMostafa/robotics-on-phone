@@ -1,13 +1,8 @@
-import { UsbSerial } from "capacitor-usb-serial";
-import { UsbSerialNative } from "./usbSerialExtra";
+import type { USBAdapter, UsbDeviceInfo } from "../../platform/types";
+import { capacitorUsbAdapter } from "../../../platform/capacitor/CapacitorUsbAdapter";
 
-export interface UsbDevice {
-  deviceId: number;
-  vendorId: number;
-  productId: number;
-  deviceName?: string;
-  deviceKey?: string;
-}
+/** @deprecated Use UsbDeviceInfo from core/platform/types instead */
+export type UsbDevice = UsbDeviceInfo;
 
 type Listener = () => void;
 type DataListener = (data: string) => void;
@@ -26,8 +21,9 @@ function withTimeout<T>(
 }
 
 export class UsbService {
+  private adapter: USBAdapter;
   private portKey: string | null = null;
-  private device: UsbDevice | null = null;
+  private device: UsbDeviceInfo | null = null;
   private connecting = false;
   private listeners: Listener[] = [];
   private reading = false;
@@ -39,6 +35,14 @@ export class UsbService {
 
   private readonly maxLogLines = 500;
   private readonly maxTerminalLines = 1000;
+
+  constructor(adapter?: USBAdapter) {
+    this.adapter = adapter ?? capacitorUsbAdapter;
+  }
+
+  setAdapter(adapter: USBAdapter): void {
+    this.adapter = adapter;
+  }
 
   subscribe(fn: Listener) {
     this.listeners.push(fn);
@@ -98,12 +102,11 @@ export class UsbService {
     this.notify();
   }
 
-  async scan(): Promise<UsbDevice[]> {
-    const result = await UsbSerial.getDeviceConnections();
-    return result.devices ?? [];
+  async scan(): Promise<UsbDeviceInfo[]> {
+    return this.adapter.scan();
   }
 
-  async connect(device: UsbDevice) {
+  async connect(device: UsbDeviceInfo) {
     if (this.connecting) {
       throw new Error("Connection already in progress");
     }
@@ -117,7 +120,7 @@ export class UsbService {
 
     try {
       await withTimeout(
-        UsbSerial.openConnection({
+        this.adapter.openConnection({
           deviceId: device.deviceId,
           baudRate: 115200,
           dataBits: 8,
@@ -152,7 +155,7 @@ export class UsbService {
 
     try {
       await withTimeout(
-        UsbSerial.endConnection({ key }),
+        this.adapter.endConnection(key),
         3000,
         "Disconnect timeout",
       );
@@ -166,7 +169,7 @@ export class UsbService {
       throw new Error("Not connected");
     }
     await withTimeout(
-      UsbSerial.write({ key: this.portKey, message, noRead: true }),
+      this.adapter.write(this.portKey, message, true),
       3000,
       "Send timeout",
     );
@@ -177,7 +180,7 @@ export class UsbService {
       throw new Error("Not connected");
     }
     return withTimeout(
-      UsbSerial.read({ key: this.portKey }),
+      this.adapter.read(this.portKey),
       1500,
       "Read timeout",
     );
@@ -209,7 +212,7 @@ export class UsbService {
   private async readLoop() {
     while (this.reading && this.portKey) {
       try {
-        const result = await this.read();
+        const result = await this.adapter.read(this.portKey);
         const data = result?.data || "";
         if (data) {
           this.addTerminal(data);
@@ -233,21 +236,21 @@ export class UsbService {
     if (!this.portKey) {
       throw new Error("Not connected");
     }
-    await UsbSerialNative.writeBytes({ key: this.portKey, data });
+    await this.adapter.writeBytes(this.portKey, data);
   }
 
   async readBytes() {
     if (!this.portKey) {
       throw new Error("Not connected");
     }
-    return UsbSerialNative.readBytes({ key: this.portKey });
+    return this.adapter.readBytes(this.portKey);
   }
 
   async setDTR(value: boolean) {
     if (!this.portKey) {
       throw new Error("Not connected");
     }
-    await UsbSerialNative.setDTR({ key: this.portKey, value });
+    await this.adapter.setDTR(this.portKey, value);
   }
 }
 

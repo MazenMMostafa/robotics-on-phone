@@ -7,4 +7,10 @@ export const UPLOAD_EVENTS = {
   UPLOAD_FINISHED: "upload:finished",
   UPLOAD_CANCELLED: "upload:cancelled",
   UPLOAD_FAILED: "upload:failed",
+  TOOLCHAIN_DETECTED: "toolchain:detected",
+  TOOLCHAIN_MISSING: "toolchain:missing",
+  BACKEND_SELECTED: "backend:selected",
+  BACKEND_EXECUTION_STARTED: "backend:executionStarted",
+  BACKEND_EXECUTION_FINISHED: "backend:executionFinished",
+  BACKEND_EXECUTION_FAILED: "backend:executionFailed",
 } as const;

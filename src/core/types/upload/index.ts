@@ -12,5 +12,12 @@ export {
   PermissionDeniedError,
   DeviceDisconnectedError,
   UnknownUploaderError,
+  ToolNotInstalled,
+  ToolVersionMismatch,
+  ToolExecutionFailed,
+  InvalidArguments,
+  BackendUnavailable,
 } from "./error";
 export type { ResetStrategy, VerificationStrategy, UploadBoardMapping } from "./boardMapping";
+export type { UploaderBackend, BackendValidationResult } from "./backend";
+export type { ToolchainStatus, ToolchainInfo } from "./toolchain";

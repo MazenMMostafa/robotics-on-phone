@@ -107,3 +107,38 @@ export class UnknownUploaderError extends UploadError {
     this.name = "UnknownUploaderError";
   }
 }
+
+export class ToolNotInstalled extends UploadError {
+  constructor(toolId: string) {
+    super("TOOL_NOT_INSTALLED", `Tool "${toolId}" is not installed`, false, { toolId });
+    this.name = "ToolNotInstalled";
+  }
+}
+
+export class ToolVersionMismatch extends UploadError {
+  constructor(toolId: string, expected: string, found: string) {
+    super("TOOL_VERSION_MISMATCH", `Tool "${toolId}" version mismatch: expected ${expected}, found ${found}`, false, { toolId, expected, found });
+    this.name = "ToolVersionMismatch";
+  }
+}
+
+export class ToolExecutionFailed extends UploadError {
+  constructor(toolId: string, exitCode: number, stderr?: string) {
+    super("TOOL_EXECUTION_FAILED", `Tool "${toolId}" failed with exit code ${exitCode}`, true, { toolId, exitCode, stderr });
+    this.name = "ToolExecutionFailed";
+  }
+}
+
+export class InvalidArguments extends UploadError {
+  constructor(toolId: string, message: string) {
+    super("INVALID_ARGUMENTS", message, false, { toolId });
+    this.name = "InvalidArguments";
+  }
+}
+
+export class BackendUnavailable extends UploadError {
+  constructor(backendId: string, reason: string) {
+    super("BACKEND_UNAVAILABLE", `Upload backend "${backendId}" is unavailable: ${reason}`, false, { backendId, reason });
+    this.name = "BackendUnavailable";
+  }
+}

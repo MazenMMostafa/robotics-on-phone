@@ -60,6 +60,9 @@ import { CodeGeneratorRegistry, CodeGenerationManager } from "../services/codege
 // Phase 13 services
 import { ArduinoCppGenerator } from "../services/codegen/arduino";
 
+// Phase 15 services
+import { PipelineService } from "../services/pipeline";
+
 export function bootstrapContainer(): void {
   // Platform adapters
   container.registerInstance("storage", capacitorStorageAdapter);
@@ -166,6 +169,10 @@ export function bootstrapContainer(): void {
   // Phase 13 - Arduino C++ Generator (real generator implementing CodeGenerator)
   const arduinoCppGenerator = new ArduinoCppGenerator();
   codeGeneratorRegistry.register(arduinoCppGenerator);
+
+  // Phase 15 - End-to-end Pipeline Orchestrator (composes existing managers, no new framework)
+  const pipelineService = new PipelineService(codeGenerationManager, buildManager, uploadManager, logger);
+  container.registerInstance("pipelineService", pipelineService);
 
   // Core registries (extension system)
   container.registerInstance("eventBus", EventBus);

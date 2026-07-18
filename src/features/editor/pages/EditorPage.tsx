@@ -1,15 +1,19 @@
 import { useRef, useState } from "react";
-import { compileArduinoCode } from "../../../core/services/compiler/CompileClient";
-import { uploadHex } from "../../../core/services/stk500/Stk500Uploader";
 import { usbService } from "../../../core/services/usb/UsbService";
 import type { Page } from "../../../app/App";
 import { BOARDS } from "../../../core/types/board";
 import { getProject } from "../../../core/services/project/ProjectRepository";
 import { BlocklyWorkspace } from "../../blockly/workspace/BlocklyWorkspace";
 import { useProjectStore } from "../../projects/store/projectStore";
+import { container } from "../../../core/di/ServiceContainer";
+import type { PipelineService } from "../../../core/services/pipeline/PipelineService";
+import type { PipelineProgress } from "../../../core/types/pipeline";
+import { isPipelineError } from "../../../core/types/pipeline";
 import {
   ArrowLeft, Check, Code2, Copy, Download, Play, Settings, Upload, X,
 } from "lucide-react";
+
+const PIPELINE_SUPPORTED: ReadonlyArray<string> = ["uno", "nano", "mega"];
 
 interface Props { id: string; setPage: (page: Page) => void }
 
@@ -23,6 +27,7 @@ function EditorPage({ id, setPage }: Props) {
 
   const [showSettings, setShowSettings] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
+  const [progressLabel, setProgressLabel] = useState("");
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
@@ -101,46 +106,67 @@ function EditorPage({ id, setPage }: Props) {
   };
 
   const handleUpload = async () => {
-    const code = getCurrentCode();
-    const usbState = usbService.getState();
-
-    if (project.board === "esp32") {
-      alert("ESP32 upload is not supported yet. UNO/Nano only for now.");
+    if (!PIPELINE_SUPPORTED.includes(project.board)) {
+      alert(`${BOARDS[project.board].name} upload is not supported yet. Uno / Nano / Mega only for now.`);
       return;
     }
-    if (!code || code.trim().length === 0) { alert("No code to upload"); return; }
-    if (!usbState.connected) {
+
+    const usbState = usbService.getState();
+    if (!usbState.connected || !usbState.portKey) {
       alert("Connect your Arduino first");
       setPage({ name: "connect", backTo: { name: "editor", id: project.id } });
       return;
     }
 
+    const pipeline = container.get<PipelineService>("pipelineService");
+    const notificationService = container.get<{ success: (t: string, m?: string, d?: number) => void; error: (t: string, m?: string, d?: number) => void }>("notificationService");
+
     setUploadStatus("uploading");
     try {
-      const hex = await compileArduinoCode({
-        board: project.board === "nano" ? "nano" : "uno",
-        code,
-      });
-      console.log("HEX ready:", hex.slice(0, 200));
-      console.log("HEX length:", hex.length);
-
-      usbService.stopReading();
-      if (project.board === "nano") {
-        try { await uploadHex(hex, 115200); }
-        catch (firstError) {
-          console.warn("Nano upload failed at 115200, retrying 57600...", firstError);
-          await uploadHex(hex, 57600);
-        }
-      } else { await uploadHex(hex, 115200); }
+      const result = await pipeline.run(
+        {
+          boardId: project.board,
+          framework: "arduino",
+          language: "arduino-cpp",
+          workspaceXml: project.xml,
+          portId: usbState.portKey,
+          additionalArgs: {},
+        },
+        (progress: PipelineProgress) => {
+          const lastMessage = progress.messages[progress.messages.length - 1] ?? "";
+          setUploadStatus("uploading");
+          setProgressLabel(`${progressPercent(progress)}% · ${stageLabel(progress.stage)}${lastMessage ? ` — ${lastMessage}` : ""}`);
+        },
+      );
 
       setUploadStatus("done");
-      alert("Upload done 🚀");
+      notificationService.success(
+        "Upload complete 🚀",
+        `${BOARDS[project.board].name} programmed in ${result.duration}ms (gen ${result.generationDuration}ms, build ${result.buildDuration}ms, upload ${result.uploadDuration}ms).`,
+      );
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      console.error("Upload failed:", e);
+      const code = isPipelineError(e) ? e.code : "UNKNOWN";
+      console.error("Pipeline upload failed:", e);
       setUploadStatus("fail");
-      alert(`Upload failed:\n${message}`);
+      notificationService.error(`Upload failed (${code})`, message);
     }
+  };
+
+  const progressPercent = (p: PipelineProgress): number => Math.min(100, Math.max(0, Math.round(p.percent)));
+  const stageLabel = (stage: PipelineProgress["stage"]): string => {
+    const labels: Record<PipelineProgress["stage"], string> = {
+      idle: "Idle",
+      generating: "Generating",
+      building: "Building",
+      "preparing-upload": "Preparing",
+      uploading: "Uploading",
+      verifying: "Verifying",
+      completed: "Done",
+      cancelled: "Cancelled",
+      failed: "Failed",
+    };
+    return labels[stage];
   };
 
   const handleRename = (name: string) => {
@@ -173,7 +199,7 @@ function EditorPage({ id, setPage }: Props) {
           uploadStatus === "fail" ? "text-destructive" : "text-muted-foreground"
         }`}>
           {uploadStatus === "idle" && "Ready to upload"}
-          {uploadStatus === "uploading" && "Uploading to board…"}
+          {uploadStatus === "uploading" && (progressLabel || "Uploading to board…")}
           {uploadStatus === "done" && "✓ Upload complete!"}
           {uploadStatus === "fail" && "✗ Upload failed"}
         </div>

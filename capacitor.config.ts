@@ -5,10 +5,11 @@ const config: CapacitorConfig = {
   appName: "NewBegin Makes",
   webDir: "dist",
   server: {
-    androidScheme: "https",
+    androidScheme: "http",
   },
   android: {
     allowMixedContent: true,
+    webContentsDebuggingEnabled: true,
   },
 };
 

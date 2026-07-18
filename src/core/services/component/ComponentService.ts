@@ -1,4 +1,5 @@
 import type { ComponentConfig } from "../../types/componentConfig";
+import { ComponentRegistry } from "../extension/ComponentRegistry";
 import { ExtensionManager } from "../extension/ExtensionManager";
 
 type ComponentModule = { default: ComponentConfig };
@@ -16,9 +17,8 @@ function buildFullList(): ComponentConfig[] {
   const builtin = loadBuiltinComponents();
 
   ExtensionManager.init();
-  const extComponents = ExtensionManager.getComponents();
 
-  for (const ext of extComponents) {
+  for (const ext of ComponentRegistry.getAllComponents()) {
     if (!builtin.find((c) => c.id === ext.id)) {
       builtin.push({
         id: ext.id,

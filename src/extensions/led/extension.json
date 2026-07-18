@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "author": "NewBegin Makes",
   "description": "Basic LED output support — blink, fade, and control LEDs",
+  "apiVersion": "1.0",
+  "minimumAppVersion": "1.0.0",
   "dependencies": {
     "extensions": [],
     "libraries": [],

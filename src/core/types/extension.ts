@@ -13,6 +13,8 @@ export interface ExtensionManifest {
   dependencies: ExtensionDependencies;
   supportedBoards: string[];
   icon?: string;
+  apiVersion?: string;
+  minimumAppVersion?: string;
 }
 
 export interface ToolboxCategoryConfig {
@@ -50,19 +52,64 @@ export interface ExtensionExample {
   blocks?: string;
   difficulty: "beginner" | "intermediate" | "advanced";
   extensionId: string;
+  board?: string;
+  tags?: string[];
+  category?: string;
+  thumbnail?: string;
 }
 
-export interface ExtensionModule {
-  manifest: ExtensionManifest;
-  categories?: () => ToolboxCategoryConfig[];
-  blocks?: () => ExtensionBlock[];
-  components?: () => ExtensionComponentDefinition[];
-  examples?: () => ExtensionExample[];
+export interface LibraryDefinition {
+  name: string;
+  version?: string;
+  url?: string;
+  headers: string[];
+  provides: string[];
+  boards?: string[];
 }
+
+export interface CommandDefinition {
+  id: string;
+  title: string;
+  category: string;
+  icon?: string;
+  shortcut?: string;
+  execute: (...args: any[]) => void | Promise<void>;
+}
+
+export interface AssetDefinition {
+  path: string;
+  type: "icon" | "image" | "svg" | "animation" | "preview";
+  content: string;
+  extensionId: string;
+}
+
+export type ExtensionLifecycleState =
+  | "discovered"
+  | "loaded"
+  | "activating"
+  | "active"
+  | "deactivating"
+  | "inactive"
+  | "error";
 
 export interface ExtensionRegistryEntry {
   manifest: ExtensionManifest;
   module: ExtensionModule;
   loaded: boolean;
   error?: string;
+  lifecycleState?: ExtensionLifecycleState;
+}
+
+export interface Disposable {
+  dispose(): void;
+}
+
+export interface ExtensionModule {
+  manifest: ExtensionManifest;
+  activate?: (context: any) => void | Promise<void>;
+  deactivate?: () => void | Promise<void>;
+  categories?: () => ToolboxCategoryConfig[];
+  blocks?: () => ExtensionBlock[];
+  components?: () => ExtensionComponentDefinition[];
+  examples?: () => ExtensionExample[];
 }

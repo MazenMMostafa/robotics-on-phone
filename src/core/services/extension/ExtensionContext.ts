@@ -225,6 +225,39 @@ export class ExtensionContext {
     }
   }
 
+  // ── Generation Status (Read-only) ────────────────────────
+  getGenerationStatus(): string {
+    try {
+      const gm = container.get<any>("codeGenerationManager");
+      return gm.getStatus();
+    } catch {
+      return "idle";
+    }
+  }
+
+  getGenerationProgress(): { stage: string; percent: number; messages: string[] } | null {
+    try {
+      const gm = container.get<any>("codeGenerationManager");
+      const progress = gm.getCurrentProgress();
+      return {
+        stage: progress.stage,
+        percent: progress.percent,
+        messages: progress.messages,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  hasQueuedGenerations(): boolean {
+    try {
+      const gm = container.get<any>("codeGenerationManager");
+      return gm.hasQueuedGenerations();
+    } catch {
+      return false;
+    }
+  }
+
   // ── Lifecycle ───────────────────────────────────────────
   dispose(): void {
     for (const sub of this.subscriptions) {

@@ -51,6 +51,9 @@ import { EsptoolBackend } from "../services/upload/backends";
 // Phase 11 services
 import { BuildEngineRegistry, BuildManager } from "../services/build";
 
+// Phase 12 services
+import { CodeGeneratorRegistry, CodeGenerationManager } from "../services/codegen";
+
 export function bootstrapContainer(): void {
   // Platform adapters
   container.registerInstance("storage", capacitorStorageAdapter);
@@ -142,6 +145,12 @@ export function bootstrapContainer(): void {
   const buildManager = new BuildManager(buildEngineRegistry, logger);
   container.registerInstance("buildEngineRegistry", buildEngineRegistry);
   container.registerInstance("buildManager", buildManager);
+
+  // Phase 12 - Code Generation Framework
+  const codeGeneratorRegistry = new CodeGeneratorRegistry();
+  const codeGenerationManager = new CodeGenerationManager(codeGeneratorRegistry, logger);
+  container.registerInstance("codeGeneratorRegistry", codeGeneratorRegistry);
+  container.registerInstance("codeGenerationManager", codeGenerationManager);
 
   // Core registries (extension system)
   container.registerInstance("eventBus", EventBus);

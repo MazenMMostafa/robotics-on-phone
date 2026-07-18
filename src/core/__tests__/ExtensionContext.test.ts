@@ -164,4 +164,16 @@ describe("ExtensionContext", () => {
   it("isDeviceConnected returns false when no container", () => {
     expect(ctx.isDeviceConnected()).toBe(false);
   });
+
+  it("getGenerationStatus returns idle when no container", () => {
+    expect(ctx.getGenerationStatus()).toBe("idle");
+  });
+
+  it("getGenerationProgress returns null when no container", () => {
+    expect(ctx.getGenerationProgress()).toBeNull();
+  });
+
+  it("hasQueuedGenerations returns false when no container", () => {
+    expect(ctx.hasQueuedGenerations()).toBe(false);
+  });
 });

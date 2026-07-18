@@ -189,16 +189,12 @@ export class ArduinoCliAdapter {
       const result: { hexPath?: string; elfPath?: string; mapPath?: string; size: number } = {
         size: 0,
       };
-      let found = false;
       if (existsSync(hexPath)) {
         result.hexPath = hexPath;
         result.size = statSync(hexPath).size;
-        found = true;
-      }
-      if (existsSync(elfPath)) {
+      } else if (existsSync(elfPath)) {
         result.elfPath = elfPath;
-        if (!found) result.size = statSync(elfPath).size;
-        found = true;
+        result.size = statSync(elfPath).size;
       }
       if (existsSync(mapPath)) {
         result.mapPath = mapPath;

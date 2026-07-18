@@ -1,10 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.mock("fs", () => ({
+  existsSync: vi.fn().mockReturnValue(true),
+  statSync: vi.fn().mockReturnValue({ size: 2048 } as never),
+  mkdirSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  readFileSync: vi.fn().mockReturnValue(Buffer.from("hex-content")),
+  rmSync: vi.fn(),
+}));
+
+import { existsSync, writeFileSync, readFileSync } from "fs";
 import { ArduinoCliBuildEngine } from "../../services/build/arduino/ArduinoCliBuildEngine";
 import type { ArduinoCliAdapter } from "../../services/build/arduino/ArduinoCliAdapter";
 import type { BuildOptions, BuildProgress } from "../../types/build/engine";
 import { CompilerMissing, InvalidBoard } from "../../types/build/error";
 
-function makeMockAdapter(overrides: Partial<ArduinoCliAdapter> = {}): ArduinoCliAdapter {
+function makeMockAdapter(): ArduinoCliAdapter {
   return {
     detectTool: vi.fn().mockReturnValue({ path: "/usr/bin/arduino-cli", version: "1.0.0" }),
     getPath: vi.fn().mockReturnValue("/usr/bin/arduino-cli"),
@@ -23,14 +34,14 @@ function makeMockAdapter(overrides: Partial<ArduinoCliAdapter> = {}): ArduinoCli
     }),
     parseErrors: vi.fn().mockReturnValue([]),
     parseWarnings: vi.fn().mockReturnValue([]),
-  } as unknown as ArduinoCliAdapter & Partial<ArduinoCliAdapter> & Record<string, unknown> & overrides;
+  } as unknown as ArduinoCliAdapter;
 }
 
 function makeOptions(): BuildOptions {
   return {
     boardId: "uno",
     framework: "arduino",
-    additionalArgs: { sourceContent: 'void setup() {}\nvoid loop() {}\n' },
+    additionalArgs: { sourceContent: "void setup() {}\nvoid loop() {}\n" },
   };
 }
 
@@ -41,6 +52,9 @@ describe("ArduinoCliBuildEngine", () => {
   beforeEach(() => {
     mockAdapter = makeMockAdapter();
     engine = new ArduinoCliBuildEngine(mockAdapter as ArduinoCliAdapter);
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(writeFileSync).mockClear();
+    vi.mocked(readFileSync).mockReturnValue(Buffer.from("hex-content"));
   });
 
   describe("identity", () => {
@@ -105,12 +119,12 @@ describe("ArduinoCliBuildEngine", () => {
     });
 
     it("writes the sketch source to a temp directory", async () => {
-      const spy = vi.spyOn(require("fs"), "writeFileSync");
       await engine.build(makeOptions());
-      expect(spy).toHaveBeenCalled();
-      const writtenPath = spy.mock.calls[0][0] as string;
+      expect(writeFileSync).toHaveBeenCalled();
+      const writtenPath = vi.mocked(writeFileSync).mock.calls[0][0] as string;
       expect(writtenPath).toContain("sketch.ino");
-      spy.mockRestore();
+      const writtenContent = vi.mocked(writeFileSync).mock.calls[0][1] as string;
+      expect(writtenContent).toContain("void setup");
     });
 
     it("returns failure when compile fails", async () => {
@@ -161,20 +175,17 @@ describe("ArduinoCliBuildEngine", () => {
     it("returns true for an existing artifact with matching checksum", async () => {
       const result = await engine.build(makeOptions());
       const artifact = result.artifact!;
-      const spy = vi.spyOn(require("fs"), "existsSync").mockReturnValue(true);
-      const readSpy = vi.spyOn(require("fs"), "readFileSync").mockReturnValue(Buffer.from("content"));
+      vi.mocked(existsSync).mockReturnValue(true);
+      vi.mocked(readFileSync).mockReturnValue(Buffer.from("hex-content"));
       const verified = await engine.verify(artifact);
       expect(verified).toBe(true);
-      spy.mockRestore();
-      readSpy.mockRestore();
     });
 
     it("returns false when artifact path does not exist", async () => {
       const result = await engine.build(makeOptions());
-      const spy = vi.spyOn(require("fs"), "existsSync").mockReturnValue(false);
+      vi.mocked(existsSync).mockReturnValue(false);
       const verified = await engine.verify(result.artifact!);
       expect(verified).toBe(false);
-      spy.mockRestore();
     });
   });
 

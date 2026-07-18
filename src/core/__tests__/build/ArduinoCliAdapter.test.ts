@@ -85,7 +85,7 @@ describe("ArduinoCliAdapter", () => {
 
     it("returns success and locates build output on successful compile", () => {
       vi.mocked(execFileSync).mockReturnValue("Compile complete" as never);
-      vi.mocked(existsSync).mockImplementation((p) => String(p).endsWith("sketch.ino.hex"));
+      vi.mocked(existsSync).mockImplementation((p) => String(p).includes("arduino.avr.uno") || String(p).endsWith("sketch.ino.hex"));
       vi.mocked(statSync).mockReturnValue({ size: 1234 } as never);
 
       const result = adapter.compile({
@@ -102,7 +102,7 @@ describe("ArduinoCliAdapter", () => {
 
     it("parses warnings from stdout", () => {
       vi.mocked(execFileSync).mockReturnValue("something warning: deprecated API" as never);
-      vi.mocked(existsSync).mockImplementation((p) => String(p).endsWith("sketch.ino.hex"));
+      vi.mocked(existsSync).mockImplementation((p) => String(p).includes("arduino.avr.uno") || String(p).endsWith("sketch.ino.hex"));
       vi.mocked(statSync).mockReturnValue({ size: 100 } as never);
 
       const result = adapter.compile({

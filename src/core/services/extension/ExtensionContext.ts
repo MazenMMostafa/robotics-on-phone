@@ -159,6 +159,39 @@ export class ExtensionContext {
     }
   }
 
+  // ── Build Status (Read-only) ────────────────────────────
+  getBuildStatus(): string {
+    try {
+      const bm = container.get<any>("buildManager");
+      return bm.getStatus();
+    } catch {
+      return "idle";
+    }
+  }
+
+  getBuildProgress(): { stage: string; percent: number; messages: string[] } | null {
+    try {
+      const bm = container.get<any>("buildManager");
+      const progress = bm.getCurrentProgress();
+      return {
+        stage: progress.stage,
+        percent: progress.percent,
+        messages: progress.messages,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  hasQueuedBuilds(): boolean {
+    try {
+      const bm = container.get<any>("buildManager");
+      return bm.hasQueuedBuilds();
+    } catch {
+      return false;
+    }
+  }
+
   // ── Upload Status (Read-only) ───────────────────────────
   getUploadStatus(): string {
     try {

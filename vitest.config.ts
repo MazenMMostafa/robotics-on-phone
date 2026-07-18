@@ -60,6 +60,11 @@ export default defineConfig({
         "src/core/services/upload/esp32/EspResetStrategy.ts",
         "src/core/services/upload/esp32/EspBootMode.ts",
         "src/core/services/upload/backends/EsptoolBackend.ts",
+        // Phase 11 - Build System
+        "src/core/services/build/BuildEngineRegistry.ts",
+        "src/core/services/build/BuildManager.ts",
+        "src/core/services/build/BuildCache.ts",
+        "src/core/services/build/MockBuildEngine.ts",
       ],
       exclude: [
         "src/**/*.test.ts",
@@ -116,6 +121,11 @@ export default defineConfig({
         "src/core/services/upload/esp32/EspResetStrategy.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
         "src/core/services/upload/esp32/EspBootMode.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
         "src/core/services/upload/backends/EsptoolBackend.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        // Phase 11 - Build System
+        "src/core/services/build/BuildEngineRegistry.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        "src/core/services/build/BuildManager.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
+        "src/core/services/build/BuildCache.ts": { statements: 95, branches: 80, functions: 100, lines: 95 },
+        "src/core/services/build/MockBuildEngine.ts": { statements: 90, branches: 80, functions: 90, lines: 90 },
       },
       reporter: ["text", "html", "lcov"],
     },

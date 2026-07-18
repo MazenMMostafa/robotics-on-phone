@@ -48,6 +48,9 @@ import { AvrdudeBackend } from "../services/upload/backends";
 import { Esp32UploadEngine } from "../services/upload/esp32";
 import { EsptoolBackend } from "../services/upload/backends";
 
+// Phase 11 services
+import { BuildEngineRegistry, BuildManager } from "../services/build";
+
 export function bootstrapContainer(): void {
   // Platform adapters
   container.registerInstance("storage", capacitorStorageAdapter);
@@ -133,6 +136,12 @@ export function bootstrapContainer(): void {
   // Phase 10 - ESP32 Upload Engine
   const esp32UploadEngine = new Esp32UploadEngine(uploaderBackendRegistry, logger);
   uploadEngineRegistry.register(esp32UploadEngine);
+
+  // Phase 11 - Build Framework
+  const buildEngineRegistry = new BuildEngineRegistry();
+  const buildManager = new BuildManager(buildEngineRegistry, logger);
+  container.registerInstance("buildEngineRegistry", buildEngineRegistry);
+  container.registerInstance("buildManager", buildManager);
 
   // Core registries (extension system)
   container.registerInstance("eventBus", EventBus);

@@ -128,4 +128,40 @@ describe("ExtensionContext", () => {
     ctx.dispose();
     expect(ctx.subscriptions).toHaveLength(0);
   });
+
+  it("getUploadStatus returns idle when no container", () => {
+    expect(ctx.getUploadStatus()).toBe("idle");
+  });
+
+  it("getUploadProgress returns null when no container", () => {
+    expect(ctx.getUploadProgress()).toBeNull();
+  });
+
+  it("hasQueuedUploads returns false when no container", () => {
+    expect(ctx.hasQueuedUploads()).toBe(false);
+  });
+
+  it("getBuildStatus returns idle when no container", () => {
+    expect(ctx.getBuildStatus()).toBe("idle");
+  });
+
+  it("getBuildProgress returns null when no container", () => {
+    expect(ctx.getBuildProgress()).toBeNull();
+  });
+
+  it("hasQueuedBuilds returns false when no container", () => {
+    expect(ctx.hasQueuedBuilds()).toBe(false);
+  });
+
+  it("getCurrentBoardId returns null when no container", () => {
+    expect(ctx.getCurrentBoardId()).toBeNull();
+  });
+
+  it("getBoardCapabilities returns empty when no container", () => {
+    expect(ctx.getBoardCapabilities()).toEqual([]);
+  });
+
+  it("isDeviceConnected returns false when no container", () => {
+    expect(ctx.isDeviceConnected()).toBe(false);
+  });
 });

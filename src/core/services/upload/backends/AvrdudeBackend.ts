@@ -66,11 +66,12 @@ export class AvrdudeBackend implements UploaderBackend {
     }
 
     const baudRate = options.baudRate ?? profile.defaultBaudRate;
+    const deviceId = options.additionalArgs?.deviceId as number | undefined;
     const connection = this.hardwareManager.createConnection("usb");
     const startTime = Date.now();
 
     try {
-      await connection.connect({ baudRate });
+      await connection.connect({ baudRate, deviceId });
       this.reportProgress(onProgress, "uploading", 30, [{ text: "Connected to device" }]);
 
       const protocol = profile.protocol === "stk500v1"
@@ -138,9 +139,10 @@ export class AvrdudeBackend implements UploaderBackend {
     const profile = getAvrBoardProfile(options.boardId);
     if (!profile) return false;
 
+    const deviceId = options.additionalArgs?.deviceId as number | undefined;
     const connection = this.hardwareManager.createConnection("usb");
     try {
-      await connection.connect({ baudRate: options.baudRate ?? profile.defaultBaudRate });
+      await connection.connect({ baudRate: options.baudRate ?? profile.defaultBaudRate, deviceId });
 
       const protocol = profile.protocol === "stk500v1"
         ? new STK500V1Protocol(connection, this.logger)
@@ -171,9 +173,11 @@ export class AvrdudeBackend implements UploaderBackend {
     this.cancelled = true;
   }
 
-  async cleanup(_options: UploadOptions): Promise<void> {
+  async cleanup(options: UploadOptions): Promise<void> {
+    const deviceId = options.additionalArgs?.deviceId as number | undefined;
     const connection = this.hardwareManager.createConnection("usb");
     try {
+      await connection.connect({ deviceId });
       await connection.disconnect();
     } catch {
       // ignore cleanup errors
@@ -186,9 +190,10 @@ export class AvrdudeBackend implements UploaderBackend {
 
     this.logger.info("AvrdudeBackend", `Preparing ${profile.mcu} on ${options.portId}`);
 
+    const deviceId = options.additionalArgs?.deviceId as number | undefined;
     const connection = this.hardwareManager.createConnection("usb");
     try {
-      await connection.connect({ baudRate: profile.resetBaudRate });
+      await connection.connect({ baudRate: profile.resetBaudRate, deviceId });
       await this.sleep(100);
       await connection.disconnect();
       await this.sleep(profile.resetWaitMs);

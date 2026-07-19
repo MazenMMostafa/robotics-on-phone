@@ -52,7 +52,8 @@ export class CapacitorUsbAdapter implements USBAdapter {
 
   async readBytes(key: string): Promise<ReadResult> {
     const result = await UsbSerialNative.readBytes({ key });
-    return { data: String(result?.data ?? "") };
+    const bytes = Array.isArray(result?.data) ? result.data : [];
+    return { data: String.fromCharCode(...bytes), bytes };
   }
 
   async setDTR(key: string, value: boolean): Promise<void> {

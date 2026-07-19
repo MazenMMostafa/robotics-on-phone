@@ -9,6 +9,7 @@ export interface ConnectionOptions {
   parity?: "none" | "odd" | "even";
   autoReconnect?: boolean;
   timeout?: number;
+  deviceId?: number;
 }
 
 export interface ReadResult {

@@ -1,10 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usbService } from "../../../core/services/usb/UsbService";
 import type { Page } from "../../../app/App";
 import { BOARDS } from "../../../core/types/board";
-import { getProject } from "../../../core/services/project/ProjectRepository";
+import { getProject, updateProject, removeProject } from "../../../core/services/project/ProjectRepository";
 import { BlocklyWorkspace } from "../../blockly/workspace/BlocklyWorkspace";
-import { useProjectStore } from "../../projects/store/projectStore";
 import { container } from "../../../core/di/ServiceContainer";
 import type { PipelineService } from "../../../core/services/pipeline/PipelineService";
 import type { PipelineProgress } from "../../../core/types/pipeline";
@@ -22,7 +21,6 @@ type CopyStatus = "idle" | "copied" | "fail";
 type WindowWithCode = Window & { getCode?: () => string };
 
 function EditorPage({ id, setPage }: Props) {
-  const { removeProject, updateProject } = useProjectStore();
   const project = getProject(id);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -34,6 +32,16 @@ function EditorPage({ id, setPage }: Props) {
   const [projectName, setProjectName] = useState(project?.name ?? "");
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastXmlRef = useRef(project?.xml ?? "");
+
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        updateProject(id, { xml: lastXmlRef.current });
+      }
+    };
+  }, [id]);
 
   if (!project) {
     return (
@@ -50,6 +58,7 @@ function EditorPage({ id, setPage }: Props) {
   }
 
   const handleXmlChange = (xml: string) => {
+    lastXmlRef.current = xml;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveTimer.current = null;
@@ -130,7 +139,7 @@ function EditorPage({ id, setPage }: Props) {
           language: "arduino-cpp",
           workspaceXml: project.xml,
           portId: usbState.portKey,
-          additionalArgs: {},
+          additionalArgs: { deviceId: usbState.device?.deviceId },
         },
         (progress: PipelineProgress) => {
           const lastMessage = progress.messages[progress.messages.length - 1] ?? "";

@@ -21,14 +21,15 @@ export class USBConnection implements ConnectionAdapter {
   async connect(options?: ConnectionOptions): Promise<void> {
     this._state = "connecting";
     try {
+      const deviceId = options?.deviceId ?? 0;
       await this.adapter.openConnection({
-        deviceId: 0,
+        deviceId,
         baudRate: options?.baudRate ?? 115200,
         dataBits: options?.dataBits ?? 8,
         stopBits: options?.stopBits ?? 1,
         parity: options?.parity ?? "none",
       });
-      this.key = "usb-0";
+      this.key = `usb-${deviceId}`;
       this._state = "connected";
     } catch (e) {
       this._state = "error";
@@ -68,7 +69,7 @@ export class USBConnection implements ConnectionAdapter {
   async readBytes(_timeout?: number): Promise<ReadResult> {
     if (!this.key) throw new Error("Not connected");
     const result = await this.adapter.readBytes(this.key);
-    return { data: result.data ?? "" };
+    return { data: result.data ?? "", bytes: result.bytes };
   }
 
   async flush(): Promise<void> {

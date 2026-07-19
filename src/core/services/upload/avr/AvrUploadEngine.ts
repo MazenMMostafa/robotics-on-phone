@@ -24,8 +24,7 @@ export class AvrUploadEngine implements UploadEngine {
   }
 
   async prepare(options: UploadOptions): Promise<void> {
-    this.logger.info("AvrUploadEngine", `Preparing upload for ${options.boardId} on ${options.portId}`);
-    console.log(`[AvrEngine] prepare board=${options.boardId} port=${options.portId}`);
+    this.logger.nbLog("info", "AvrUploadEngine", `Preparing upload for ${options.boardId} on ${options.portId}`);
   }
 
   async upload(
@@ -35,42 +34,36 @@ export class AvrUploadEngine implements UploadEngine {
     const backend = this.backendRegistry.getById("avrdude-v1");
     if (!backend) {
       const msg = "AVR upload backend not registered";
-      this.logger.error("AvrUploadEngine", msg);
-      console.error(`[AvrEngine] ${msg}`);
+      this.logger.nbLog("error", "AvrUploadEngine", msg);
       throw new BackendUnavailable("avrdude-v1", msg);
     }
 
     const validation = await backend.validate(options);
     if (!validation.valid) {
       const msg = validation.errors?.[0] ?? "Invalid upload options";
-      this.logger.error("AvrUploadEngine", `Validation failed: ${msg}`);
-      console.error(`[AvrEngine] Validation failed: ${msg}`);
+      this.logger.nbLog("error", "AvrUploadEngine", `Validation failed: ${msg}`);
       throw new InvalidArguments("avrdude-v1", msg);
     }
 
-    this.logger.info("AvrUploadEngine", `Starting upload via ${backend.id} board=${options.boardId} port=${options.portId} baudRate=${options.baudRate ?? "default"} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
-    console.log(`[AvrEngine] upload via ${backend.id} board=${options.boardId} port=${options.portId} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
+    this.logger.nbLog("info", "AvrUploadEngine", `Starting upload via ${backend.id} board=${options.boardId} port=${options.portId} baudRate=${options.baudRate ?? "default"} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
     return backend.execute(options, onProgress);
   }
 
   async verify(options: UploadOptions): Promise<boolean> {
     const backend = this.backendRegistry.getById("avrdude-v1");
     if (!backend) return false;
-    this.logger.info("AvrUploadEngine", `Verifying board=${options.boardId}`);
-    console.log(`[AvrEngine] verify board=${options.boardId}`);
+    this.logger.nbLog("info", "AvrUploadEngine", `Verifying board=${options.boardId}`);
     return backend.verify(options);
   }
 
   async cancel(): Promise<void> {
-    this.logger.info("AvrUploadEngine", "Cancel requested");
-    console.log(`[AvrEngine] cancel`);
+    this.logger.nbLog("info", "AvrUploadEngine", "Cancel requested");
     const backend = this.backendRegistry.getById("avrdude-v1");
     await backend?.cancel();
   }
 
   async cleanup(options: UploadOptions): Promise<void> {
-    this.logger.info("AvrUploadEngine", `Cleanup board=${options.boardId}`);
-    console.log(`[AvrEngine] cleanup board=${options.boardId}`);
+    this.logger.nbLog("info", "AvrUploadEngine", `Cleanup board=${options.boardId}`);
     const backend = this.backendRegistry.getById("avrdude-v1");
     await backend?.cleanup(options);
   }

@@ -119,8 +119,7 @@ export class UploadManager {
     this.startTime = Date.now();
     this.currentProgress = createInitialProgress();
 
-    this.logger.info("UploadMgr", `[UPLOAD] START engine=${engine.id} board=${options.boardId} port=${options.portId} artifact=${options.artifactPath} baudRate=${options.baudRate ?? "default"} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
-    console.log(`[UploadMgr] START engine=${engine.id} board=${options.boardId} port=${options.portId} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
+    this.logger.nbLog("info", "UploadMgr", `[UPLOAD] START engine=${engine.id} board=${options.boardId} port=${options.portId} artifact=${options.artifactPath} baudRate=${options.baudRate ?? "default"} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
 
     EventBus.emit(UPLOAD_EVENTS_CONST.STARTED, {
       engine: engine.id,
@@ -130,8 +129,7 @@ export class UploadManager {
 
     try {
       this.updateProgress("validating", 5);
-      this.logger.info("UploadMgr", `[UPLOAD] STAGE=VALIDATING engine.supports(${options.boardId})=${engine.supports(options.boardId)}`);
-      console.log(`[UploadMgr] STAGE=VALIDATING supports=${engine.supports(options.boardId)}`);
+      this.logger.nbLog("info", "UploadMgr", `[UPLOAD] STAGE=VALIDATING engine.supports(${options.boardId})=${engine.supports(options.boardId)}`);
       const supported = engine.supports(options.boardId);
       if (!supported) {
         throw new UnknownUploaderError(options.boardId);
@@ -139,34 +137,28 @@ export class UploadManager {
 
       this.updateProgress("compiling", 10);
       this.currentProgress.messages.push("Looking up compile artifact...");
-      this.logger.info("UploadMgr", `[UPLOAD] STAGE=COMPILED artifact=${options.artifactPath}`);
-      console.log(`[UploadMgr] STAGE=COMPILED artifact=${options.artifactPath}`);
+      this.logger.nbLog("info", "UploadMgr", `[UPLOAD] STAGE=COMPILED artifact=${options.artifactPath}`);
 
       this.updateProgress("preparing", 20);
-      this.logger.info("UploadMgr", `[UPLOAD] STAGE=PREPARING`);
-      console.log(`[UploadMgr] STAGE=PREPARING`);
+      this.logger.nbLog("info", "UploadMgr", `[UPLOAD] STAGE=PREPARING`);
       EventBus.emit(UPLOAD_EVENTS_CONST.PREPARING, { options });
       await engine.prepare(options);
 
       this.updateProgress("uploading", 30);
-      this.logger.info("UploadMgr", `[UPLOAD] STAGE=UPLOADING (delegating to engine)`);
-      console.log(`[UploadMgr] STAGE=UPLOADING`);
+      this.logger.nbLog("info", "UploadMgr", `[UPLOAD] STAGE=UPLOADING (delegating to engine)`);
       const result = await engine.upload(options, (p) => {
         this.currentProgress = p;
         this.emitProgress();
       });
 
       this.updateProgress("verifying", 85);
-      this.logger.info("UploadMgr", `[UPLOAD] STAGE=VERIFYING`);
-      console.log(`[UploadMgr] STAGE=VERIFYING`);
+      this.logger.nbLog("info", "UploadMgr", `[UPLOAD] STAGE=VERIFYING`);
       EventBus.emit(UPLOAD_EVENTS_CONST.VERIFYING, { options });
       const verified = await engine.verify(options);
-      this.logger.info("UploadMgr", `[UPLOAD] STAGE=VERIFY result=${verified}`);
-      console.log(`[UploadMgr] STAGE=VERIFY result=${verified}`);
+      this.logger.nbLog("info", "UploadMgr", `[UPLOAD] STAGE=VERIFY result=${verified}`);
 
       this.updateProgress("cleaning", 95);
-      this.logger.info("UploadMgr", `[UPLOAD] STAGE=CLEANING`);
-      console.log(`[UploadMgr] STAGE=CLEANING`);
+      this.logger.nbLog("info", "UploadMgr", `[UPLOAD] STAGE=CLEANING`);
       await engine.cleanup(options);
 
       this.updateProgress("done", 100);
@@ -186,8 +178,7 @@ export class UploadManager {
         progress: this.getCurrentProgress(),
       });
 
-      this.logger.info("UploadMgr", `[UPLOAD] DONE status=${finalResult.status} duration=${finalResult.duration}ms bytes=${finalResult.bytesUploaded ?? "?"}`);
-      console.log(`[UploadMgr] DONE status=${finalResult.status} duration=${finalResult.duration}ms`);
+      this.logger.nbLog("info", "UploadMgr", `[UPLOAD] DONE status=${finalResult.status} duration=${finalResult.duration}ms bytes=${finalResult.bytesUploaded ?? "?"}`);
       this.status = "done";
       this.activeEngine = null;
 
@@ -199,8 +190,7 @@ export class UploadManager {
       this.currentProgress.errors.push(errorMessage);
       this.emitProgress();
 
-      this.logger.error("UploadMgr", `[UPLOAD] FAILED: ${errorMessage}${errorStack ? `\n${errorStack}` : ""}`);
-      console.error(`[UploadMgr] FAILED: ${errorMessage}`, e);
+      this.logger.nbLog("error", "UploadMgr", `[UPLOAD] FAILED: ${errorMessage}${errorStack ? `\n${errorStack}` : ""}`);
 
       EventBus.emit(UPLOAD_EVENTS_CONST.FAILED, {
         error: e,

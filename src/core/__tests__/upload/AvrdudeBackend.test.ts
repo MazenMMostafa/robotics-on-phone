@@ -13,7 +13,7 @@ function makeOptions(overrides?: Partial<UploadOptions>): UploadOptions {
   };
 }
 
-const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("../../services/logging/LoggerService").LoggerService;
+const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), nbLog: vi.fn() } as unknown as import("../../services/logging/LoggerService").LoggerService;
 
 describe("AvrdudeBackend", () => {
   let backend: AvrdudeBackend;
@@ -126,7 +126,7 @@ describe("AvrdudeBackend", () => {
       vi.mocked(connection.connect).mockRejectedValue(new Error("connection failed"));
       const ok = await backend.verify(makeOptions());
       expect(ok).toBe(false);
-      expect(mockLogger.error).toHaveBeenCalled();
+      expect(mockLogger.nbLog).toHaveBeenCalled();
     });
   });
 

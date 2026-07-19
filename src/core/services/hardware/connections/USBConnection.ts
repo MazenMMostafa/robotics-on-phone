@@ -85,8 +85,7 @@ export class USBConnection implements ConnectionAdapter {
     const t0 = Date.now();
     const result = await this.adapter.writeBytes(this.key, data);
     const ms = Date.now() - t0;
-    this.logger?.debug(MOD, `writeBytes(${data.length}) ${hexDump(data)} → ${result.bytesWritten ?? "?"}B in ${ms}ms`);
-    console.log(`[USB] writeBytes(${data.length}) ${hexDump(data)} → ${result.bytesWritten ?? "?"}B ${ms}ms`);
+    this.logger?.nbLog("debug", MOD, `writeBytes(${data.length}) ${hexDump(data)} → ${result.bytesWritten ?? "?"}B in ${ms}ms`);
     return result;
   }
 
@@ -96,8 +95,7 @@ export class USBConnection implements ConnectionAdapter {
     const result = await this.adapter.readBytes(this.key);
     const ms = Date.now() - t0;
     const bytes = result.bytes ?? [];
-    this.logger?.debug(MOD, `readBytes(timeout=${_timeout ?? "default"}) → ${bytes.length}B ${hexDump(bytes)} in ${ms}ms`);
-    console.log(`[USB] readBytes(${_timeout ?? "default"}) → ${bytes.length}B ${hexDump(bytes)} ${ms}ms`);
+    this.logger?.nbLog("debug", MOD, `readBytes(timeout=${_timeout ?? "default"}) → ${bytes.length}B ${hexDump(bytes)} in ${ms}ms`);
     return { data: result.data ?? "", bytes };
   }
 

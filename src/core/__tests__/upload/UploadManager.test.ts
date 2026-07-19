@@ -13,6 +13,7 @@ class MockLogger {
   info = vi.fn();
   warn = vi.fn();
   error = vi.fn();
+  nbLog = vi.fn();
 }
 
 function createMockEngine(

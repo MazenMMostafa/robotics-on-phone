@@ -15,7 +15,7 @@ function makeOptions(overrides?: Partial<UploadOptions>): UploadOptions {
   };
 }
 
-const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as LoggerService;
+const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), nbLog: vi.fn() } as unknown as LoggerService;
 
 describe("AvrUploadEngine", () => {
   let engine: AvrUploadEngine;

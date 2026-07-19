@@ -28,7 +28,7 @@ function createMockConnection(): ConnectionAdapter {
   };
 }
 
-const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), nbLog: vi.fn() };
 
 describe("STK500V2Protocol", () => {
   let connection: ConnectionAdapter;

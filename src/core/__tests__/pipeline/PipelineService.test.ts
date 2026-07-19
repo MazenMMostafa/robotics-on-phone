@@ -22,6 +22,7 @@ const SILENT_LOGGER: LoggerService = {
   info: () => {},
   warn: () => {},
   error: () => {},
+  nbLog: () => {},
   setLevel: () => {},
   getLevel: () => "error",
 } as unknown as LoggerService;

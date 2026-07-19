@@ -95,8 +95,7 @@ export class PipelineService {
 
     EventBus.emit(PIPELINE_EVENTS.STARTED, { options, timestamp: startTime });
 
-    this.logger.info("Pipeline", `[PIPELINE] START board=${options.boardId} port=${options.portId} framework=${options.framework} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
-    console.log(`[Pipeline] START board=${options.boardId} port=${options.portId} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
+    this.logger.nbLog("info", "Pipeline", `[PIPELINE] START board=${options.boardId} port=${options.portId} framework=${options.framework} deviceId=${options.additionalArgs?.deviceId ?? "default"}`);
 
     try {
       // 1. GENERATE
@@ -123,15 +122,13 @@ export class PipelineService {
       const sourceContent = this.extractSourceContent(generationResult.artifact);
 
       const genDuration = Date.now() - genStart;
-      this.logger.info("Pipeline", `[PIPELINE] STAGE=GENERATED ${genDuration}ms checksum=${sourceArtifactChecksum}`);
-      console.log(`[Pipeline] STAGE=GENERATED ${genDuration}ms`);
+      this.logger.nbLog("info", "Pipeline", `[PIPELINE] STAGE=GENERATED ${genDuration}ms checksum=${sourceArtifactChecksum}`);
       this.reportProgress(onProgress, `Generation complete (${genDuration}ms)`);
 
       // 2. BUILD
       buildStart = Date.now();
       this.setStage("building");
-      this.logger.info("Pipeline", `[PIPELINE] STAGE=BUILDING`);
-      console.log(`[Pipeline] STAGE=BUILDING`);
+      this.logger.nbLog("info", "Pipeline", `[PIPELINE] STAGE=BUILDING`);
       this.reportProgress(onProgress, "Building firmware with Arduino CLI…");
 
       const buildResult = await this.buildManager.start({
@@ -151,8 +148,7 @@ export class PipelineService {
       buildArtifactChecksum = buildArtifact.checksum;
       firmwarePath = buildArtifact.firmwarePath;
       const buildDuration = Date.now() - buildStart;
-      this.logger.info("Pipeline", `[PIPELINE] STAGE=BUILT ${buildDuration}ms firmware=${firmwarePath} checksum=${buildArtifactChecksum}`);
-      console.log(`[Pipeline] STAGE=BUILT ${buildDuration}ms firmware=${firmwarePath}`);
+      this.logger.nbLog("info", "Pipeline", `[PIPELINE] STAGE=BUILT ${buildDuration}ms firmware=${firmwarePath} checksum=${buildArtifactChecksum}`);
       this.reportProgress(onProgress, `Build complete (${buildDuration}ms)`);
 
       // 3. PREPARE UPLOAD
@@ -162,8 +158,7 @@ export class PipelineService {
       // 4. UPLOAD
       uploadStart = Date.now();
       this.setStage("uploading");
-      this.logger.info("Pipeline", `[PIPELINE] STAGE=UPLOADING port=${options.portId}`);
-      console.log(`[Pipeline] STAGE=UPLOADING port=${options.portId}`);
+      this.logger.nbLog("info", "Pipeline", `[PIPELINE] STAGE=UPLOADING port=${options.portId}`);
       this.reportProgress(onProgress, "Uploading firmware to board…");
 
       const uploadResult = await this.uploadManager.start({
@@ -177,26 +172,22 @@ export class PipelineService {
       if (this.cancelling) throw new PipelineCancelledError("Upload cancelled", { stage: "uploading", boardId: options.boardId });
       bytesUploaded = uploadResult.bytesUploaded;
       const uploadDuration = Date.now() - uploadStart;
-      this.logger.info("Pipeline", `[PIPELINE] STAGE=UPLOADED ${uploadDuration}ms bytes=${bytesUploaded ?? "?"}`);
-      console.log(`[Pipeline] STAGE=UPLOADED ${uploadDuration}ms`);
+      this.logger.nbLog("info", "Pipeline", `[PIPELINE] STAGE=UPLOADED ${uploadDuration}ms bytes=${bytesUploaded ?? "?"}`);
       this.reportProgress(onProgress, `Upload complete (${uploadDuration}ms)`);
 
       // 5. VERIFY
       this.setStage("verifying");
-      this.logger.info("Pipeline", `[PIPELINE] STAGE=VERIFYING`);
-      console.log(`[Pipeline] STAGE=VERIFYING`);
+      this.logger.nbLog("info", "Pipeline", `[PIPELINE] STAGE=VERIFYING`);
       this.reportProgress(onProgress, "Verifying device…");
       const verified = this.isUploadVerified(uploadResult);
       if (!verified) {
-        this.logger.error("Pipeline", `[PIPELINE] STAGE=VERIFY FAILED`);
-        console.error(`[Pipeline] STAGE=VERIFY FAILED`);
+        this.logger.nbLog("error", "Pipeline", `[PIPELINE] STAGE=VERIFY FAILED`);
         throw new UploadFailedError(
           "Upload completed but device verification failed",
           { stage: "verifying", boardId: options.boardId, underlyingCode: uploadResult.errorCode },
         );
       }
-      this.logger.info("Pipeline", `[PIPELINE] STAGE=VERIFIED`);
-      console.log(`[Pipeline] STAGE=VERIFIED`);
+      this.logger.nbLog("info", "Pipeline", `[PIPELINE] STAGE=VERIFIED`);
       this.reportProgress(onProgress, "Verification successful");
 
       // 6. COMPLETED
@@ -220,8 +211,7 @@ export class PipelineService {
       };
 
       EventBus.emit(PIPELINE_EVENTS.FINISHED, { result, progress: this.getCurrentProgress() });
-      this.logger.info("Pipeline", `[PIPELINE] DONE ${totalDuration}ms gen=${genDuration}ms build=${buildDuration}ms upload=${uploadDuration}ms`);
-      console.log(`[Pipeline] DONE ${totalDuration}ms`);
+      this.logger.nbLog("info", "Pipeline", `[PIPELINE] DONE ${totalDuration}ms gen=${genDuration}ms build=${buildDuration}ms upload=${uploadDuration}ms`);
       this.status = "done";
       return result;
     } catch (error) {
@@ -231,8 +221,7 @@ export class PipelineService {
       this.emitProgress(onProgress);
 
       const errStack = mapped.stack ?? "";
-      this.logger.error("Pipeline", `[PIPELINE] FAILED stage=${this.currentStage}: ${mapped.message}${errStack ? `\n${errStack}` : ""}`);
-      console.error(`[Pipeline] FAILED stage=${this.currentStage}: ${mapped.message}`, error);
+      this.logger.nbLog("error", "Pipeline", `[PIPELINE] FAILED stage=${this.currentStage}: ${mapped.message}${errStack ? `\n${errStack}` : ""}`);
 
       EventBus.emit(PIPELINE_EVENTS.FAILED, {
         error: mapped,
@@ -278,7 +267,7 @@ export class PipelineService {
   }
 
   retry(options: PipelineOptions, onProgress?: PipelineProgressHandler): Promise<PipelineResult> {
-    this.logger.info("PipelineService", "Retrying pipeline");
+    this.logger.nbLog("info", "PipelineService", "Retrying pipeline");
     return this.run(options, onProgress);
   }
 

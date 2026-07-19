@@ -1,3 +1,5 @@
+import { nbLog } from "./NbLog";
+
 export type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
 
 export interface LogEntry {
@@ -66,6 +68,10 @@ export class LoggerService {
 
   error(module: string, message: string, data?: unknown): void {
     this.log("error", module, message, data);
+  }
+
+  nbLog(level: "debug" | "info" | "warn" | "error" | "verbose", module: string, message: string): void {
+    nbLog(level, `[${module}] ${message}`);
   }
 
   private log(level: LogLevel, module: string, message: string, data?: unknown): void {

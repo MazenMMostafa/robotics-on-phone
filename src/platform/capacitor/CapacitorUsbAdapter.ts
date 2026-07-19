@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { UsbSerial } from "capacitor-usb-serial";
 import { UsbSerialNative } from "../../core/services/usb/usbSerialExtra";
+import { nbLog } from "../../core/services/logging/NbLog";
 import type {
   USBAdapter,
   UsbDeviceInfo,
@@ -21,10 +22,10 @@ export class CapacitorUsbAdapter implements USBAdapter {
         deviceName: d.deviceName,
         deviceKey: d.deviceKey,
       }));
-      console.log(`[USB-Adapter] scan() → ${devices.length} devices in ${Date.now() - t0}ms`);
+      nbLog("info", `[USB-Adapter] scan() → ${devices.length} devices in ${Date.now() - t0}ms`);
       return devices;
     } catch (e) {
-      console.error(`[USB-Adapter] scan() FAILED in ${Date.now() - t0}ms`, e);
+      nbLog("error", `[USB-Adapter] scan() FAILED in ${Date.now() - t0}ms ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
   }
@@ -32,7 +33,7 @@ export class CapacitorUsbAdapter implements USBAdapter {
   async openConnection(options: UsbConnectionOptions): Promise<void> {
     const t0 = Date.now();
     try {
-      console.log(`[USB-Adapter] openConnection() deviceId=${options.deviceId} baudRate=${options.baudRate}`);
+      nbLog("info", `[USB-Adapter] openConnection() deviceId=${options.deviceId} baudRate=${options.baudRate}`);
       await UsbSerial.openConnection({
         deviceId: options.deviceId,
         baudRate: options.baudRate,
@@ -40,9 +41,9 @@ export class CapacitorUsbAdapter implements USBAdapter {
         stopBits: options.stopBits ?? 1,
         parity: options.parity ?? "none",
       });
-      console.log(`[USB-Adapter] openConnection() OK in ${Date.now() - t0}ms`);
+      nbLog("info", `[USB-Adapter] openConnection() OK in ${Date.now() - t0}ms`);
     } catch (e) {
-      console.error(`[USB-Adapter] openConnection() FAILED deviceId=${options.deviceId} in ${Date.now() - t0}ms`, e);
+      nbLog("error", `[USB-Adapter] openConnection() FAILED deviceId=${options.deviceId} in ${Date.now() - t0}ms ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
   }
@@ -50,11 +51,11 @@ export class CapacitorUsbAdapter implements USBAdapter {
   async endConnection(key: string): Promise<void> {
     const t0 = Date.now();
     try {
-      console.log(`[USB-Adapter] endConnection(${key})`);
+      nbLog("info", `[USB-Adapter] endConnection(${key})`);
       await UsbSerial.endConnection({ key });
-      console.log(`[USB-Adapter] endConnection(${key}) OK in ${Date.now() - t0}ms`);
+      nbLog("info", `[USB-Adapter] endConnection(${key}) OK in ${Date.now() - t0}ms`);
     } catch (e) {
-      console.error(`[USB-Adapter] endConnection(${key}) FAILED in ${Date.now() - t0}ms`, e);
+      nbLog("error", `[USB-Adapter] endConnection(${key}) FAILED in ${Date.now() - t0}ms ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
   }
@@ -62,10 +63,10 @@ export class CapacitorUsbAdapter implements USBAdapter {
   async write(key: string, message: string, noRead?: boolean): Promise<WriteResult> {
     try {
       await UsbSerial.write({ key, message, noRead });
-      console.log(`[USB-Adapter] write(${key}, len=${message.length}) OK`);
+      nbLog("info", `[USB-Adapter] write(${key}, len=${message.length}) OK`);
       return {};
     } catch (e) {
-      console.error(`[USB-Adapter] write(${key}) FAILED`, e);
+      nbLog("error", `[USB-Adapter] write(${key}) FAILED ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
   }
@@ -74,10 +75,10 @@ export class CapacitorUsbAdapter implements USBAdapter {
     try {
       const result = await UsbSerial.read({ key });
       const data = result?.data ?? "";
-      console.log(`[USB-Adapter] read(${key}) → ${data.length} chars`);
+      nbLog("info", `[USB-Adapter] read(${key}) → ${data.length} chars`);
       return { data };
     } catch (e) {
-      console.error(`[USB-Adapter] read(${key}) FAILED`, e);
+      nbLog("error", `[USB-Adapter] read(${key}) FAILED ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
   }
@@ -85,10 +86,10 @@ export class CapacitorUsbAdapter implements USBAdapter {
   async writeBytes(key: string, data: number[]): Promise<WriteResult> {
     try {
       await UsbSerialNative.writeBytes({ key, data });
-      console.log(`[USB-Adapter] writeBytes(${key}, ${data.length}B) OK`);
+      nbLog("info", `[USB-Adapter] writeBytes(${key}, ${data.length}B) OK`);
       return {};
     } catch (e) {
-      console.error(`[USB-Adapter] writeBytes(${key}, ${data.length}B) FAILED`, e);
+      nbLog("error", `[USB-Adapter] writeBytes(${key}, ${data.length}B) FAILED ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
   }
@@ -97,21 +98,21 @@ export class CapacitorUsbAdapter implements USBAdapter {
     try {
       const result = await UsbSerialNative.readBytes({ key });
       const bytes = Array.isArray(result?.data) ? result.data : [];
-      console.log(`[USB-Adapter] readBytes(${key}) → ${bytes.length}B`);
+      nbLog("info", `[USB-Adapter] readBytes(${key}) → ${bytes.length}B`);
       return { data: String.fromCharCode(...bytes), bytes };
     } catch (e) {
-      console.error(`[USB-Adapter] readBytes(${key}) FAILED`, e);
+      nbLog("error", `[USB-Adapter] readBytes(${key}) FAILED ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
   }
 
   async setDTR(key: string, value: boolean): Promise<void> {
     try {
-      console.log(`[USB-Adapter] setDTR(${key}, ${value})`);
+      nbLog("info", `[USB-Adapter] setDTR(${key}, ${value})`);
       await UsbSerialNative.setDTR({ key, value });
-      console.log(`[USB-Adapter] setDTR(${key}, ${value}) OK`);
+      nbLog("info", `[USB-Adapter] setDTR(${key}, ${value}) OK`);
     } catch (e) {
-      console.error(`[USB-Adapter] setDTR(${key}, ${value}) FAILED`, e);
+      nbLog("error", `[USB-Adapter] setDTR(${key}, ${value}) FAILED ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
   }

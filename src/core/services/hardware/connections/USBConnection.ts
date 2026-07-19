@@ -32,8 +32,7 @@ export class USBConnection implements ConnectionAdapter {
     this._state = "connecting";
     const deviceId = options?.deviceId ?? 0;
     const baudRate = options?.baudRate ?? 115200;
-    this.logger?.info(MOD, `connect() deviceId=${deviceId} baudRate=${baudRate} state=${this._state}`);
-    console.log(`[USB] connect() deviceId=${deviceId} baudRate=${baudRate}`);
+    this.logger?.nbLog("info", MOD, `connect() deviceId=${deviceId} baudRate=${baudRate} state=${this._state}`);
     const t0 = Date.now();
     try {
       await this.adapter.openConnection({
@@ -45,13 +44,11 @@ export class USBConnection implements ConnectionAdapter {
       });
       this.key = `usb-${deviceId}`;
       this._state = "connected";
-      this.logger?.info(MOD, `connect() OK key=${this.key} in ${Date.now() - t0}ms`);
-      console.log(`[USB] connect() OK key=${this.key} in ${Date.now() - t0}ms`);
+      this.logger?.nbLog("info", MOD, `connect() OK key=${this.key} in ${Date.now() - t0}ms`);
     } catch (e) {
       this._state = "error";
       const err = e instanceof Error ? e : new Error(String(e));
-      this.logger?.error(MOD, `connect() FAILED deviceId=${deviceId} ${err.name}: ${err.message}\n${err.stack ?? ""}`);
-      console.error(`[USB] connect() FAILED deviceId=${deviceId}`, e);
+      this.logger?.nbLog("error", MOD, `connect() FAILED deviceId=${deviceId} ${err.name}: ${err.message}\n${err.stack ?? ""}`);
       EventBus.emit(USB_CONNECTION_ERROR, { error: e });
       throw e;
     }
@@ -60,16 +57,13 @@ export class USBConnection implements ConnectionAdapter {
   async disconnect(): Promise<void> {
     if (!this.key) return;
     this._state = "disconnecting";
-    this.logger?.info(MOD, `disconnect() key=${this.key}`);
-    console.log(`[USB] disconnect() key=${this.key}`);
+    this.logger?.nbLog("info", MOD, `disconnect() key=${this.key}`);
     const t0 = Date.now();
     try {
       await this.adapter.endConnection(this.key);
-      this.logger?.info(MOD, `disconnect() OK in ${Date.now() - t0}ms`);
-      console.log(`[USB] disconnect() OK in ${Date.now() - t0}ms`);
+      this.logger?.nbLog("info", MOD, `disconnect() OK in ${Date.now() - t0}ms`);
     } catch (e) {
-      this.logger?.warn(MOD, `disconnect() error (ignored): ${e instanceof Error ? e.message : String(e)}`);
-      console.warn(`[USB] disconnect() error (ignored):`, e);
+      this.logger?.nbLog("warn", MOD, `disconnect() error (ignored): ${e instanceof Error ? e.message : String(e)}`);
     }
     this.key = null;
     this._state = "disconnected";

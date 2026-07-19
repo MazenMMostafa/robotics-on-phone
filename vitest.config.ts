@@ -76,6 +76,9 @@ export default defineConfig({
         "src/core/services/codegen/arduino/BlockGenerators.ts",
         "src/core/services/codegen/arduino/GenerationContext.ts",
         "src/core/services/codegen/arduino/types.ts",
+        // Phase 14 - Arduino CLI Build Engine
+        "src/core/services/build/arduino/ArduinoCliAdapter.ts",
+        "src/core/services/build/arduino/ArduinoCliBuildEngine.ts",
       ],
       exclude: [
         "src/**/*.test.ts",

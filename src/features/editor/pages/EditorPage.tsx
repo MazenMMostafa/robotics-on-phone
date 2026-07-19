@@ -9,8 +9,9 @@ import type { PipelineService } from "../../../core/services/pipeline/PipelineSe
 import type { PipelineProgress } from "../../../core/types/pipeline";
 import { isPipelineError } from "../../../core/types/pipeline";
 import {
-  ArrowLeft, Check, Code2, Copy, Download, Play, Settings, Upload, X,
+  ArrowLeft, Check, Code2, Copy, Download, FileText, Play, Settings, Upload, X,
 } from "lucide-react";
+import { UploadLogDialog } from "../components/UploadLogDialog";
 
 const PIPELINE_SUPPORTED: ReadonlyArray<string> = ["uno", "nano", "mega"];
 
@@ -27,6 +28,7 @@ function EditorPage({ id, setPage }: Props) {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
   const [progressLabel, setProgressLabel] = useState("");
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [showUploadLog, setShowUploadLog] = useState(false);
   const [generatedCode, setGeneratedCode] = useState("");
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const [projectName, setProjectName] = useState(project?.name ?? "");
@@ -216,6 +218,9 @@ function EditorPage({ id, setPage }: Props) {
         <button onClick={handleGenerateCode} className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-bold flex items-center gap-1 active:scale-95 transition">
           <Code2 className="w-4 h-4" /> Code
         </button>
+        <button onClick={() => setShowUploadLog(true)} className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-bold flex items-center gap-1 active:scale-95 transition">
+          <FileText className="w-4 h-4" /> Log
+        </button>
         <button onClick={() => setPage({ name: "connect", backTo: { name: "editor", id: project.id } })}
           className="px-3 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-bold">
           Connect
@@ -270,6 +275,8 @@ function EditorPage({ id, setPage }: Props) {
           </div>
         </div>
       )}
+
+      <UploadLogDialog open={showUploadLog} onClose={() => setShowUploadLog(false)} />
     </div>
   );
 }

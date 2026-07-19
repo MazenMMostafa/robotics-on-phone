@@ -14,6 +14,19 @@ const Cmnd_STK_READ_SIGNATURE = 0x15;
 
 const Resp_STK_OK = 0x10;
 
+const CMD_NAMES: Record<number, string> = {
+  [Cmnd_STK_GET_SYNC]: "GET_SYNC",
+  [Cmnd_STK_ENTER_PROGMODE]: "ENTER_PROGMODE",
+  [Cmnd_STK_LEAVE_PROGMODE]: "LEAVE_PROGMODE",
+  [Cmnd_STK_LOAD_ADDRESS]: "LOAD_ADDRESS",
+  [Cmnd_STK_PROG_PAGE]: "PROG_PAGE",
+  [Cmnd_STK_READ_SIGNATURE]: "READ_SIGNATURE",
+};
+
+function hex(bytes: number[]): string {
+  return bytes.map((b) => b.toString(16).padStart(2, "0")).join(" ");
+}
+
 export class STK500V2Protocol {
   private connection: ConnectionAdapter;
   private logger: LoggerService;
@@ -27,9 +40,19 @@ export class STK500V2Protocol {
   async sync(): Promise<void> {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
+        this.logger.debug("STK500v2", `[SYNC] attempt ${attempt + 1}/3`);
+        console.log(`[STK500v2] [SYNC] attempt ${attempt + 1}/3`);
         const resp = this.decodeResp(await this.sendCmd(Cmnd_STK_GET_SYNC, []));
-        if (resp.status === Resp_STK_OK) return;
-      } catch {
+        if (resp.status === Resp_STK_OK) {
+          this.logger.info("STK500v2", `[SYNC] OK on attempt ${attempt + 1}`);
+          console.log(`[STK500v2] [SYNC] OK attempt ${attempt + 1}`);
+          return;
+        }
+        this.logger.warn("STK500v2", `[SYNC] unexpected status: 0x${resp.status?.toString(16)} on attempt ${attempt + 1}`);
+        console.warn(`[STK500v2] [SYNC] unexpected status: 0x${resp.status?.toString(16)} attempt ${attempt + 1}`);
+      } catch (e) {
+        this.logger.warn("STK500v2", `[SYNC] attempt ${attempt + 1} error: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`[STK500v2] [SYNC] attempt ${attempt + 1} error:`, e);
         if (attempt === 2) throw new UploadTimeoutError(10000);
       }
     }
@@ -37,16 +60,28 @@ export class STK500V2Protocol {
   }
 
   async enterProgrammingMode(): Promise<void> {
+    this.logger.debug("STK500v2", `[ENTER_PROGMODE] sending`);
+    console.log(`[STK500v2] [ENTER_PROGMODE] sending`);
     const resp = this.decodeResp(await this.sendCmd(Cmnd_STK_ENTER_PROGMODE, []));
     if (resp.status !== Resp_STK_OK) {
-      throw new UploadError("ENTER_PROGMODE_FAILED", "Failed to enter programming mode", true);
+      const msg = `Failed to enter programming mode (status: 0x${resp.status?.toString(16)})`;
+      this.logger.error("STK500v2", `[ENTER_PROGMODE] ${msg}`);
+      console.error(`[STK500v2] [ENTER_PROGMODE] ${msg}`);
+      throw new UploadError("ENTER_PROGMODE_FAILED", msg, true);
     }
+    this.logger.info("STK500v2", `[ENTER_PROGMODE] OK`);
+    console.log(`[STK500v2] [ENTER_PROGMODE] OK`);
   }
 
   async leaveProgrammingMode(): Promise<void> {
+    this.logger.debug("STK500v2", `[LEAVE_PROGMODE] sending`);
+    console.log(`[STK500v2] [LEAVE_PROGMODE] sending`);
     const resp = this.decodeResp(await this.sendCmd(Cmnd_STK_LEAVE_PROGMODE, []));
     if (resp.status !== Resp_STK_OK) {
-      this.logger.warn("STK500V2", "Leave programming mode returned non-OK");
+      this.logger.warn("STK500v2", `[LEAVE_PROGMODE] non-OK status: 0x${resp.status?.toString(16)}`);
+      console.warn(`[STK500v2] [LEAVE_PROGMODE] non-OK: 0x${resp.status?.toString(16)}`);
+    } else {
+      this.logger.debug("STK500v2", `[LEAVE_PROGMODE] OK`);
     }
   }
 
@@ -59,7 +94,10 @@ export class STK500V2Protocol {
     ];
     const resp = this.decodeResp(await this.sendCmd(Cmnd_STK_LOAD_ADDRESS, addrBytes));
     if (resp.status !== Resp_STK_OK) {
-      throw new UploadError("LOAD_ADDRESS_FAILED", `Failed to load address 0x${address.toString(16)}`, true);
+      const msg = `Failed to load address 0x${address.toString(16)} (status: 0x${resp.status?.toString(16)})`;
+      this.logger.error("STK500v2", `[LOAD_ADDRESS] ${msg}`);
+      console.error(`[STK500v2] [LOAD_ADDRESS] ${msg}`);
+      throw new UploadError("LOAD_ADDRESS_FAILED", msg, true);
     }
   }
 
@@ -71,12 +109,19 @@ export class STK500V2Protocol {
     const data = [...sizeBytes, ...pageData];
     const resp = this.decodeResp(await this.sendCmd(Cmnd_STK_PROG_PAGE, data));
     if (resp.status !== Resp_STK_OK) {
-      throw new UploadError("PROG_PAGE_FAILED", "Failed to program page", true);
+      const msg = `Failed to program page (status: 0x${resp.status?.toString(16)})`;
+      this.logger.error("STK500v2", `[PROG_PAGE] ${msg}`);
+      console.error(`[STK500v2] [PROG_PAGE] ${msg}`);
+      throw new UploadError("PROG_PAGE_FAILED", msg, true);
     }
   }
 
   async readSignature(): Promise<number[]> {
+    this.logger.debug("STK500v2", `[READ_SIGNATURE] sending`);
+    console.log(`[STK500v2] [READ_SIGNATURE] sending`);
     const resp = this.decodeResp(await this.sendCmd(Cmnd_STK_READ_SIGNATURE, []));
+    this.logger.info("STK500v2", `[READ_SIGNATURE] sig=[${resp.data}]`);
+    console.log(`[STK500v2] [READ_SIGNATURE] sig=[${resp.data}]`);
     return resp.data;
   }
 
@@ -85,24 +130,35 @@ export class STK500V2Protocol {
     const body = [cmd, ...payload];
     const checksum = this.crc8([MESSAGE_START, this.seq, TOKEN, body.length, ...body]);
     const buffer = [MESSAGE_START, this.seq, TOKEN, body.length, ...body, checksum];
+    const cmdName = CMD_NAMES[cmd] ?? `0x${cmd.toString(16)}`;
 
     const writeResult = await this.connection.writeBytes(buffer);
     if (!writeResult || writeResult.bytesWritten !== buffer.length) {
-      throw new UploadError("WRITE_FAILED", "Failed to write command bytes", true);
+      const msg = `WRITE_FAILED cmd=${cmdName} sent=${buffer.length}B written=${writeResult?.bytesWritten ?? "?"}B`;
+      this.logger.error("STK500v2", `[CMD=${cmdName}] ${msg}`);
+      console.error(`[STK500v2] [CMD=${cmdName}] ${msg}`);
+      throw new UploadError("WRITE_FAILED", msg, true);
     }
 
     const readResult = await this.connection.readBytes(5000);
     const raw = readResult.bytes ?? [];
     if (raw.length < 6) {
+      const msg = `TIMEOUT cmd=${cmdName} expected>=6 got=${raw.length}B raw=${hex(raw)}`;
+      this.logger.error("STK500v2", `[CMD=${cmdName}] ${msg}`);
+      console.error(`[STK500v2] [CMD=${cmdName}] ${msg}`);
       throw new UploadTimeoutError(5000);
     }
 
+    this.logger.debug("STK500v2", `[CMD=${cmdName}] sent=${hex(buffer)} rawResp=${hex(raw)}`);
     return raw;
   }
 
   private decodeResp(raw: number[]): { status: number; data: number[] } {
     if (raw[0] !== MESSAGE_START) {
-      throw new UploadError("INVALID_RESPONSE", `Invalid response start byte: 0x${raw[0]?.toString(16)}`, true);
+      const msg = `Invalid response start byte: 0x${raw[0]?.toString(16)} raw=${hex(raw)}`;
+      this.logger.error("STK500v2", `[DECODE] ${msg}`);
+      console.error(`[STK500v2] [DECODE] ${msg}`);
+      throw new UploadError("INVALID_RESPONSE", msg, true);
     }
     const bodyLen = raw[3];
     const body = raw.slice(4, 4 + bodyLen);

@@ -95,7 +95,7 @@ export class HardwareManager {
   createConnection(type: ConnectionType): ConnectionAdapter {
     switch (type) {
       case "usb":
-        return new USBConnection(this.usbAdapter);
+        return new USBConnection(this.usbAdapter, this.logger);
       case "serial":
         return new SerialConnection();
       case "bluetooth":
